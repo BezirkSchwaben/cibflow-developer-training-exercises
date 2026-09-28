@@ -1,0 +1,124 @@
+# Genehmigungsworkflow per REST, Schritt für Schritt wie auf den Folien.
+#
+# Für die VS-Code-Erweiterung REST Client (humao.rest-client):
+# Über jedem Request erscheint "Send Request". Klickt die Requests von oben nach unten.
+# Spätere Requests greifen über den Namen (@name) auf Antworten früherer Requests zu.
+#
+# Voraussetzung: Der Stack aus stack/ läuft (docker compose up -d).
+
+@baseUrl = http://localhost:8080/engine-rest
+@prozessKey = Process_Genehmigung
+@topic = genehmigung-verbuchen
+@workerId = worker-lokal
+
+# Benutzer aus dem Init-Dienst, Passwort jeweils gleich dem Benutzernamen (nur lokal)
+@antragstellerin = anna
+@genehmigerin = gerda
+@worker = worker
+
+
+### 1. Engine-Version prüfen (ohne Anmeldung antwortet die Engine mit 401)
+GET {{baseUrl}}/version
+Authorization: Basic {{worker}}:{{worker}}
+
+
+### 2. BPMN deployen: prozess/genehmigungsworkflow.bpmn als neue Version einspielen
+# enable-duplicate-filtering: unverändertes Modell erzeugt keine neue Version
+POST {{baseUrl}}/deployment/create
+Authorization: Basic {{worker}}:{{worker}}
+Content-Type: multipart/form-data; boundary=GrenzeGenehmigung
+
+--GrenzeGenehmigung
+Content-Disposition: form-data; name="deployment-name"
+
+genehmigungsworkflow
+--GrenzeGenehmigung
+Content-Disposition: form-data; name="enable-duplicate-filtering"
+
+true
+--GrenzeGenehmigung
+Content-Disposition: form-data; name="data"; filename="genehmigungsworkflow.bpmn"
+Content-Type: application/xml
+
+< ../prozess/genehmigungsworkflow.bpmn
+--GrenzeGenehmigung--
+
+
+### 3. Prozess starten als anna: camunda:initiator legt "anna" in antragsteller ab
+# @name start
+POST {{baseUrl}}/process-definition/key/{{prozessKey}}/start
+Authorization: Basic {{antragstellerin}}:{{antragstellerin}}
+Content-Type: application/json
+
+{
+  "variables": {
+    "betrag": { "value": 1200, "type": "Long" },
+    "begruendung": { "value": "Dienstreise zur Fachtagung", "type": "String" }
+  }
+}
+
+
+### 3a. Gegenprobe: antragsteller steht in der Instanz
+GET {{baseUrl}}/process-instance/{{start.response.body.$.id}}/variables/antragsteller
+Authorization: Basic {{antragstellerin}}:{{antragstellerin}}
+
+
+### 4. Aufgabe "Antrag prüfen" für gerda finden (gerda ist in der Gruppe genehmiger)
+# @name aufgabe
+GET {{baseUrl}}/task?processInstanceId={{start.response.body.$.id}}&candidateUser={{genehmigerin}}
+Authorization: Basic {{genehmigerin}}:{{genehmigerin}}
+
+
+### 5. Aufgabe mit entscheidung abschließen (genehmigt, abgelehnt oder nachbessern)
+# Nur genehmigt führt zum External Task. Bei abgelehnt oder nachbessern liefert Schritt 6 [].
+POST {{baseUrl}}/task/{{aufgabe.response.body.$[0].id}}/complete
+Authorization: Basic {{genehmigerin}}:{{genehmigerin}}
+Content-Type: application/json
+
+{
+  "variables": {
+    "entscheidung": { "value": "genehmigt", "type": "String" }
+  }
+}
+
+
+### 6. External Task holen und sperren (fetchAndLock) als worker
+# Die Antwort ist ein Array. Leer heißt: Auf dem Topic liegt gerade nichts.
+# Warten noch ältere genehmigte Anträge, holt fetchAndLock vielleicht einen davon.
+# Die Schritte 7 bis 9 arbeiten deshalb mit dem Task und der Instanz aus dieser Antwort.
+# @name gesperrt
+POST {{baseUrl}}/external-task/fetchAndLock
+Authorization: Basic {{worker}}:{{worker}}
+Content-Type: application/json
+
+{
+  "workerId": "{{workerId}}",
+  "maxTasks": 1,
+  "topics": [
+    { "topicName": "{{topic}}", "lockDuration": 60000 }
+  ]
+}
+
+
+### 7. External Task abschließen und buchungsnummer zurückmelden
+# workerId muss die sein, die den Lock hält
+POST {{baseUrl}}/external-task/{{gesperrt.response.body.$[0].id}}/complete
+Authorization: Basic {{worker}}:{{worker}}
+Content-Type: application/json
+
+{
+  "workerId": "{{workerId}}",
+  "variables": {
+    "buchungsnummer": { "value": "B-2026-0001", "type": "String" }
+  }
+}
+
+
+### 8. History prüfen: Die Instanz ist beendet (state COMPLETED)
+GET {{baseUrl}}/history/process-instance/{{gesperrt.response.body.$[0].processInstanceId}}
+Authorization: Basic {{worker}}:{{worker}}
+
+
+### 9. History prüfen: buchungsnummer steht in den Variablen der Instanz
+GET {{baseUrl}}/history/variable-instance?processInstanceId={{gesperrt.response.body.$[0].processInstanceId}}&variableName=buchungsnummer
+Authorization: Basic {{worker}}:{{worker}}

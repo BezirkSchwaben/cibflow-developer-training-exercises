@@ -1,0 +1,21 @@
+# Zeilenenden: Git speichert Text mit LF und wandelt beim Checkout passend um.
+* text=auto
+
+# Diese Dateien laufen in Linux-Containern oder werden dort gelesen.
+# Mit CRLF bricht das Init-Skript ab ("set: line 9: illegal option -"),
+# deshalb immer LF, auch nach einem Checkout unter Windows.
+*.sh    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.bpmn  text eol=lf
+*.http  text eol=lf
+
+# Windows-Skripte brauchen CRLF.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# Binärdateien nie umwandeln.
+*.png   binary
+*.jpg   binary
+*.zip   binary

@@ -1,0 +1,16 @@
+# .NET Build-Ausgaben und Testergebnisse
+bin/
+obj/
+TestResults/
+*.user
+
+# IDEs
+.vs/
+.idea/
+
+# Lokale Zugangsdaten gehören nicht ins Repo
+.env
+
+# Betriebssystem
+.DS_Store
+Thumbs.db

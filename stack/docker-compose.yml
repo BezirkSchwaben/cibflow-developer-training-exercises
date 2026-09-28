@@ -1,0 +1,73 @@
+# Übergangs-Setup für den Entwickler-Track: CIB seven Run mit PostgreSQL.
+# Das CIB flow Setup ersetzt diesen Ordner später.
+# Nur für die lokale Schulung, nicht produktiv verwenden.
+#
+# Starten:   docker compose up -d     (Podman: podman compose up -d)
+# Stoppen:   docker compose down
+# Zurück auf null (löscht die Datenbank): docker compose down -v
+name: cibflow-training
+
+services:
+
+  postgres:
+    image: docker.io/library/postgres:18.6-alpine
+    environment:
+      POSTGRES_DB: cibseven
+      POSTGRES_USER: cibseven
+      POSTGRES_PASSWORD: cibseven
+    volumes:
+      # Ab PostgreSQL 18 liegt das Datenverzeichnis unter /var/lib/postgresql/18/docker,
+      # deshalb wird /var/lib/postgresql eingebunden und nicht .../data.
+      - postgres-daten:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cibseven -d cibseven"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    # Kein Port nach außen: Nur die Engine im selben Compose-Netz spricht mit der Datenbank.
+
+  cibseven:
+    image: docker.io/cibseven/cibseven:run-2.2.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      DB_DRIVER: org.postgresql.Driver
+      DB_URL: jdbc:postgresql://postgres:5432/cibseven
+      DB_USERNAME: cibseven
+      DB_PASSWORD: cibseven
+      WAIT_FOR: postgres:5432
+      WAIT_FOR_TIMEOUT: 60
+    volumes:
+      # Eigene Run-Konfiguration: REST mit Anmeldung, Webapps, Admin demo/demo
+      - ./cibseven/default.yml:/camunda/configuration/default.yml:ro
+    healthcheck:
+      # healthy, sobald die REST-API mit Anmeldung antwortet (/actuator/health liefert in Run 2.2.0 404)
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null -u demo:demo http://localhost:8080/engine-rest/version || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    restart: unless-stopped
+
+  # Läuft einmal nach dem Start, legt Benutzer, die Gruppe genehmiger und zwei Tasklist-Filter an
+  # und beendet sich.
+  # Mehrfaches Ausführen ist unkritisch: Was schon existiert, bleibt, wie es ist.
+  init:
+    image: docker.io/curlimages/curl:8.22.0
+    depends_on:
+      - cibseven
+    environment:
+      ENGINE_URL: http://cibseven:8080/engine-rest
+      ADMIN_USER: demo
+      ADMIN_PASSWORD: demo
+    volumes:
+      - ./init/benutzer-anlegen.sh:/init/benutzer-anlegen.sh:ro
+    entrypoint: ["/bin/sh", "/init/benutzer-anlegen.sh"]
+    restart: "no"
+
+volumes:
+  postgres-daten:
