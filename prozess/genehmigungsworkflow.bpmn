@@ -31,7 +31,7 @@
     <bpmn:participant id="Participant_Bezirk" name="Genehmigungsworkflow" processRef="Process_Genehmigung" />
   </bpmn:collaboration>
 
-  <bpmn:process id="Process_Genehmigung" name="Genehmigungsworkflow" isExecutable="true">
+  <bpmn:process id="Process_Genehmigung" name="Genehmigungsworkflow" isExecutable="true" camunda:versionTag="1.0" camunda:historyTimeToLive="P365D">
     <bpmn:laneSet id="LaneSet_1">
       <bpmn:lane id="Lane_Antragsteller" name="Antragsteller:in">
         <bpmn:flowNodeRef>StartEvent_Antrag</bpmn:flowNodeRef>
@@ -288,7 +288,7 @@
         <di:waypoint x="530" y="170" />
         <di:waypoint x="560" y="170" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="440" y="212" width="80" height="27" />
+          <dc:Bounds x="440" y="196" width="80" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Nachbessern_Pruefen_di" bpmnElement="Flow_Nachbessern_Pruefen">
