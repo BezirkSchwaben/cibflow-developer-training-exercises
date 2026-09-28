@@ -11,6 +11,9 @@ TestResults/
 # Lokale Zugangsdaten gehören nicht ins Repo
 .env
 
+# Buchungen der BuchungssystemSimulation (Kapitel 12), falls ihr sie außerhalb von bin/ ablegt
+buchungen.json*
+
 # Betriebssystem
 .DS_Store
 Thumbs.db

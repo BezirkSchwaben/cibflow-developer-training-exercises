@@ -15,6 +15,9 @@
 *.cmd   text eol=crlf
 *.ps1   text eol=crlf
 
+# Visual Studio schreibt Solution-Dateien mit CRLF.
+*.sln   text eol=crlf
+
 # Binärdateien nie umwandeln.
 *.png   binary
 *.jpg   binary

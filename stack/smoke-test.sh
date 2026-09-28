@@ -91,8 +91,9 @@ if [ "$STATUS" != "200" ]; then
 fi
 
 echo "   Deployment von $BPMN"
+# deployment-name ist der Prozess-Key, wie bei "dotnet run -- deploy" im Worker und in der http-Datei
 STATUS=$(curl -s --max-time 30 -o /dev/null -w '%{http_code}' -u worker:worker \
-  -F "deployment-name=genehmigungsworkflow" -F "enable-duplicate-filtering=true" \
+  -F "deployment-name=$PROZESS_KEY" -F "enable-duplicate-filtering=true" \
   -F "data=@$BPMN;filename=genehmigungsworkflow.bpmn" "$ENGINE_URL/deployment/create")
 pruefe "deployment/create" 200 "$STATUS"
 

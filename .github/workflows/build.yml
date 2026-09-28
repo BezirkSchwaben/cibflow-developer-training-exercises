@@ -1,0 +1,134 @@
+# Prüft das Übungs-Repo bei jedem Push und Pull Request auf main.
+#
+#   startstand     Der Startstand (Ende der Übung in Kapitel 11) baut, und seine Tests laufen durch.
+#                  Die Tests mit TODO sind übersprungen, nicht rot.
+#   musterloesung  Übernimmt die Musterlösung aus loesung/ mit dem Befehl aus der README und prüft sie:
+#                  Build, Unit-Tests ohne Engine, lokaler Stack per Docker Compose,
+#                  Deployment mit "dotnet run -- deploy", Smoke-Test und die Prozesstests gegen die Engine.
+#
+# Die Zugangsdaten sind die lokalen Dev-Benutzer, die stack/init anlegt (worker/worker).
+# Sie stehen auch in der README und sind keine Secrets.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Von Hand starten, etwa vor einer Schulung: Actions, Build, "Run workflow"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  startstand:
+    name: Startstand bauen und testen
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Repo auschecken
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: .NET 10 einrichten
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Bauen
+        run: dotnet build GenehmigungWorker.sln
+
+      - name: Tests ausführen (die TODO-Tests sind übersprungen)
+        run: dotnet test GenehmigungWorker.sln --no-build --logger "console;verbosity=normal"
+
+  musterloesung:
+    name: Musterlösung gegen die lokale Engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Repo auschecken
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: .NET 10 einrichten
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Musterlösung übernehmen
+        run: cp -R loesung/src loesung/tests .
+
+      - name: Bauen
+        run: dotnet build GenehmigungWorker.sln
+
+      - name: Unit-Tests ohne Engine und ohne Zugangsdaten
+        run: dotnet test GenehmigungWorker.sln --no-build --filter "Kategorie!=Prozesstest" --logger "console;verbosity=normal"
+
+      - name: Stack starten
+        working-directory: stack
+        run: docker compose up -d
+
+      - name: Warten, bis init Benutzer, Gruppe und Filter angelegt hat
+        working-directory: stack
+        timeout-minutes: 13
+        run: |
+          # init wartet selbst bis zu zehn Minuten auf die Engine und beendet sich dann.
+          # Exit-Code 0 heißt: Benutzer, Gruppe genehmiger und Tasklist-Filter sind da.
+          init=$(docker compose ps -aq init)
+          for _ in $(seq 1 144); do
+            if [ "$(docker inspect -f '{{.State.Status}}' "$init")" = "exited" ]; then
+              docker compose logs init
+              code=$(docker inspect -f '{{.State.ExitCode}}' "$init")
+              if [ "$code" = "0" ]; then
+                exit 0
+              fi
+              echo "::error::init endete mit Exit-Code $code"
+              exit 1
+            fi
+            sleep 5
+          done
+          docker compose logs init
+          echo "::error::init ist nach zwölf Minuten nicht fertig"
+          exit 1
+
+      - name: Modell deployen
+        env:
+          EngineBenutzer: worker
+          EnginePasswort: worker
+        run: |
+          # Erstes Deployment auf dem frischen Stack: Deploy.cs muss eine neue Version anlegen
+          dotnet run --project src/GenehmigungWorker --no-build -- deploy | tee deploy.log
+          grep -q "Neue Version: Process_Genehmigung, Version 1" deploy.log
+
+      - name: Smoke-Test (Anmeldung, Deployment, alle drei Pfade per REST)
+        working-directory: stack
+        run: ./smoke-test.sh
+
+      - name: Prozesstests gegen die Engine
+        env:
+          EngineBenutzer: worker
+          EnginePasswort: worker
+        run: dotnet test GenehmigungWorker.sln --no-build --filter "Kategorie=Prozesstest" --logger "console;verbosity=normal"
+
+      - name: Zustand des Stacks bei Fehler
+        if: failure()
+        working-directory: stack
+        run: |
+          docker compose ps -a
+          docker compose logs --tail 200
+
+      - name: Stack abbauen
+        if: always()
+        working-directory: stack
+        run: docker compose down -v

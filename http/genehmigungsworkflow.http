@@ -23,6 +23,7 @@ Authorization: Basic {{worker}}:{{worker}}
 
 
 ### 2. BPMN deployen: prozess/genehmigungsworkflow.bpmn als neue Version einspielen
+# deployment-name ist der Prozess-Key, wie bei "dotnet run -- deploy" im Worker.
 # enable-duplicate-filtering: unverändertes Modell erzeugt keine neue Version
 POST {{baseUrl}}/deployment/create
 Authorization: Basic {{worker}}:{{worker}}
@@ -31,7 +32,7 @@ Content-Type: multipart/form-data; boundary=GrenzeGenehmigung
 --GrenzeGenehmigung
 Content-Disposition: form-data; name="deployment-name"
 
-genehmigungsworkflow
+{{prozessKey}}
 --GrenzeGenehmigung
 Content-Disposition: form-data; name="enable-duplicate-filtering"
 
