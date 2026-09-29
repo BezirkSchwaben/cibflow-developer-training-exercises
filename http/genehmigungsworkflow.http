@@ -5,6 +5,7 @@
 # Spätere Requests greifen über den Namen (@name) auf Antworten früherer Requests zu.
 #
 # Voraussetzung: Der Stack aus stack/ läuft (docker compose up -d).
+# Die Engine antwortet auf http://localhost:8080, Anmeldung per Basic Auth.
 
 @baseUrl = http://localhost:8080/engine-rest
 @prozessKey = Process_Genehmigung
@@ -48,6 +49,7 @@ Content-Type: application/xml
 
 
 ### 3. Prozess starten als anna: camunda:initiator legt "anna" in antragsteller ab
+# Der Start per REST umgeht das Startformular: betrag kommt als Zahl an, eine Anlage gibt es nicht.
 # @name start
 POST {{baseUrl}}/process-definition/key/{{prozessKey}}/start
 Authorization: Basic {{antragstellerin}}:{{antragstellerin}}
@@ -67,6 +69,8 @@ Authorization: Basic {{antragstellerin}}:{{antragstellerin}}
 
 
 ### 4. Aufgabe "Antrag prüfen" für gerda finden (gerda ist in der Gruppe genehmiger)
+# Leer? Nach dem Start-Event sitzt ein Speicherpunkt, die Engine legt die Aufgabe
+# einen Moment später an. Einfach noch einmal senden.
 # @name aufgabe
 GET {{baseUrl}}/task?processInstanceId={{start.response.body.$.id}}&candidateUser={{genehmigerin}}
 Authorization: Basic {{genehmigerin}}:{{genehmigerin}}
@@ -87,6 +91,7 @@ Content-Type: application/json
 
 ### 6. External Task holen und sperren (fetchAndLock) als worker
 # Die Antwort ist ein Array. Leer heißt: Auf dem Topic liegt gerade nichts.
+# Direkt nach Schritt 5 kann das auch am Speicherpunkt nach "Antrag prüfen" liegen: noch einmal senden.
 # Warten noch ältere genehmigte Anträge, holt fetchAndLock vielleicht einen davon.
 # Die Schritte 7 bis 9 arbeiten deshalb mit dem Task und der Instanz aus dieser Antwort.
 # @name gesperrt
@@ -170,7 +175,7 @@ Content-Type: application/json
 
 ### B3. Aufgabe der Instanz: nach bpmnError wartet "Buchung klären" (Task_BuchungKlaeren) bei gerda
 # Leer bei der Gegenprobe mit 1200 und solange euer Worker den Task noch nicht geholt hat.
-# includeAssignedTasks: auch nachdem gerda sie sich in der Tasklist zugewiesen hat
+# includeAssignedTasks: auch nachdem gerda sie sich in "Aufgaben bearbeiten" zugewiesen hat
 GET {{baseUrl}}/task?processInstanceId={{variante.response.body.$.id}}&candidateUser={{genehmigerin}}&includeAssignedTasks=true
 Authorization: Basic {{genehmigerin}}:{{genehmigerin}}
 

@@ -2,22 +2,9 @@
 
 Tag 2, Entwickler-Track, am Ende von Kapitel 11 „External Tasks“ (13:30 bis 14:15 Uhr).
 
-Ab jetzt läuft alles auf eurem Laptop: die lokale Instanz mit eurem Projekt und der Worker. Er holt den Task „Genehmigung verbuchen“, verbucht aber noch nichts. Das Verbuchen und die Tests folgen in [Kapitel 12](kapitel-12-worker-und-tests.md).
+Ab jetzt läuft alles auf eurem Laptop: CIB flow mit eurem Projekt und der Worker. Er holt den Task „Genehmigung verbuchen“, verbucht aber noch nichts. Das Verbuchen und die Tests folgen in [Kapitel 12](kapitel-12-worker-und-tests.md).
 
-## Übergangs-Setup: CIB seven statt CIB flow
-
-Bis das CIB flow Setup bereitsteht, startet der Ordner `stack/` eine lokale CIB seven Instanz. Deshalb läuft einiges anders als auf den Folien:
-
-| Auf den Folien | Im Übergangs-Setup |
-|---|---|
-| Lokale CIB flow Instanz | CIB seven Run 2.2.0 mit PostgreSQL, gestartet per Docker Compose aus `stack/` |
-| Projekt in der gemeinsamen Umgebung als ZIP exportieren und lokal importieren | Entfällt. Das Modell liegt schon unter `prozess/genehmigungsworkflow.bpmn`. |
-| Euer Startformular und euer Genehmigungsformular (easyForms) | Generated Forms in der CIB seven Webapp: „Betrag in Euro“ und „Grund des Antrags“ beim Start, „Entscheidung“ bei „Antrag prüfen“ |
-| Euer eigener Key, z. B. `mm-genehmigung` | `Process_Genehmigung`, die Process ID der Vorlage |
-| Euer Benutzer muss lokal in der Gruppe `genehmiger` sein | Der Dienst `init` legt `anna` (stellt Anträge) und `gerda` (Gruppe `genehmiger`) an |
-| `java -version` zeigt 21.x | Nicht nötig, die Engine läuft im Container |
-
-Topic, Variablen und IDs sind die der Vorlage aus der Schulung: Topic `genehmigung-verbuchen`, Variablen `antragsteller`, `betrag`, `begruendung` und `entscheidung`, Aufgabe `Task_Pruefen`.
+Topic, Variablen und IDs sind die aus der Schulung: Topic `genehmigung-verbuchen`, Variablen `antragsteller`, `betrag`, `begruendung` und `entscheidung`, Aufgabe `Task_Pruefen`. Im Repo liegt die Vorlage mit der Process ID `Process_Genehmigung`. Arbeitet ihr mit eurem eigenen Projekt, tragt ihr in Schritt 6 euren Key ein, z. B. `mm-genehmigung`.
 
 ## Ausgangslage
 
@@ -26,11 +13,12 @@ Den Code für diese Übung bekommt ihr fertig. Ihr schreibt hier noch nichts, ih
 | Datei | Was drinsteht | Folie |
 |---|---|---|
 | `src/GenehmigungWorker/appsettings.json` | `EngineUrl`, `ProzessKey`, `Topic`, `WorkerId` | Projektstruktur für den C#-Worker |
-| `src/GenehmigungWorker/Deploy.cs` | spielt `prozess/genehmigungsworkflow.bpmn` per Multipart-Request ein | Deployment aus der IDE |
+| `src/GenehmigungWorker/Einstellungen.cs` | liest `appsettings.json`, User Secrets und Umgebung, baut den `HttpClient` | |
 | `src/GenehmigungWorker/ExternalTaskClient.cs` | `FetchAndLockAsync`, `CompleteAsync`, `FailureAsync` und der Record `ExternalTask` | fetchAndLock in C#, complete und failure |
+| `src/GenehmigungWorker/Deploy.cs` | spielt `prozess/genehmigungsworkflow.bpmn` per Multipart-Request ein | Deployment aus der IDE |
 | `src/GenehmigungWorker/Program.cs` | Skeleton-Schleife: holt Tasks und loggt sie, schickt aber kein `complete` | |
 
-Ihr braucht eine Container-Laufzeit mit Compose (Docker Desktop, Podman Desktop oder Rancher Desktop), das .NET SDK 10, Git und VS Code. Port 8080 muss frei sein.
+Ihr braucht Docker Desktop mit mindestens 8 GB Speicher für Docker, die Zugangsdaten für `harbor.cib.de` aus der Setup-Mail, das .NET SDK 10, Git und VS Code. Die Ports 8080, 7083, 7086 und 7088 bis 7091 müssen frei sein.
 
 ## Das macht ihr
 
@@ -39,29 +27,60 @@ Alle Befehle laufen im Repo-Root, außer es steht etwas anderes dabei. Wo sich b
 ### 1. Werkzeuge prüfen
 
 ```bash
-docker compose version     # Podman: podman compose version
+docker compose version
 dotnet --version           # 10.0.x
 git --version
 ```
 
-### 2. Repo klonen und die lokale Instanz starten
+### 2. Repo klonen und CIB flow starten
 
 ```bash
 git clone https://github.com/miragon-trainings/cibflow-developer-training-exercises.git
 cd cibflow-developer-training-exercises/stack
+docker login harbor.cib.de      # Benutzer und Passwort aus der Setup-Mail
 docker compose up -d
 ```
 
-Beim ersten Start lädt Compose die Images, rund 1,6 GB. Danach braucht die Engine ein bis zwei Minuten. Fertig ist sie, wenn im Ordner `stack/` gilt:
+Beim ersten Start lädt Docker sieben Images, zusammen mehrere GB. Danach braucht der Stack etwa eine Minute. Fertig ist er, wenn im Ordner `stack/` gilt:
 
-- `docker compose ps -a` zeigt `cibseven` und `postgres` als `healthy` und `init` als `Exited (0)`.
+- `docker compose ps -a` zeigt sieben Dienste mit `Up` und die Hilfsdienste `rechte` und `init` mit `Exited (0)`.
 - `docker compose logs init` endet mit `[init] Fertig. Benutzer: anna, gerda (Gruppe genehmiger), worker. Passwort jeweils wie der Benutzername.`
+- Die REST-API der Engine antwortet ohne Anmeldung mit 401, mit Anmeldung mit ihrer Version:
+  ```bash
+  curl -i http://localhost:8080/engine-rest/version                  # HTTP/1.1 401
+  curl -u worker:worker http://localhost:8080/engine-rest/version    # {"version":"2.1.4-ee"}
+  ```
+  In der Windows PowerShell schreibt ihr `curl.exe` statt `curl`.
 
 Geht danach zurück in den Repo-Root: `cd ..`
 
-Während ihr wartet, lest `ExternalTaskClient.cs` und `Deploy.cs`. Ihr findet dort den Code von den Folien wieder.
+Während ihr wartet, lest `ExternalTaskClient.cs` und `Deploy.cs`. Ihr findet dort den Code von den Folien wieder. Konten, Adressen und Probleme mit dem Stack stehen in [stack/README.md](../stack/README.md).
 
-### 3. Bauen
+### 3. Anmelden
+
+http://localhost:7083/client öffnen und als `demo` mit Passwort `demo` anmelden. Die Startseite zeigt die Kacheln „Aufgaben bearbeiten“, „Cockpit“, „Admin“, „Prozess modellieren“, „Easy Form“, „Ressourcen“ und „Prozessmanagement“. „Prozess starten“ kommt dazu, sobald ein Prozess bereitgestellt ist.
+
+### 4. Projekt importieren
+
+Ihr importiert euer Projekt als ZIP. Damit kommen Modell und easyForms auf einmal in die lokale Instanz.
+
+- **Euer eigenes Projekt:** In der gemeinsamen CIB flow Umgebung öffnet ihr euer Projekt im Prozessmanagement und ladet es mit „Projekt herunterladen“ als ZIP herunter, mit dem Stand der Formulare von heute Vormittag.
+- **Kein eigenes ZIP zur Hand:** Nehmt `prozess/genehmigungsworkflow-projekt.zip` aus dem Repo. Darin stecken die Vorlage `prozess/genehmigungsworkflow.bpmn` und die beiden easyForms `antragsformular` (Betrag, Begründung, Anlage) und `genehmigungsformular` (Entscheidung).
+
+So importiert ihr, angemeldet als `demo`:
+
+1. Kachel „Prozessmanagement“, dann „Lokale Datei importieren“.
+2. Die ZIP auswählen. Der Schalter „Automatisch bereitstellen“ steht schon an, lasst ihn so.
+3. „Importieren“ klicken.
+
+Das Ergebnis zeigt unter „Erstellte Diagramme“ das Modell, unter „Erstellte Formulare“ die easyForms und unter „AUTO-DEPLOY“ `1 Diagramm(e) erfolgreich bereitgestellt.` Das Projekt heißt wie die ZIP-Datei. Damit ist das Modell in der Engine, ein `deploy` aus dem Repo braucht ihr dafür nicht.
+
+Mit eurem eigenen Projekt prüft ihr zusätzlich:
+
+- Der Service Task „Genehmigung verbuchen“ ist External mit Topic `genehmigung-verbuchen`.
+- „Antrag prüfen“ geht an die Gruppe `genehmiger`. Die ZIP enthält keine Benutzer und Gruppen, lokal sind `gerda` in `genehmiger` und `anna` als Antragstellerin angelegt.
+
+### 5. Bauen
 
 ```bash
 dotnet build
@@ -69,14 +88,14 @@ dotnet build
 
 Der Build baut Worker und Tests und endet ohne Fehler und ohne Warnungen.
 
-### 4. appsettings.json prüfen und Zugangsdaten setzen
+### 6. appsettings.json prüfen und Zugangsdaten setzen
 
-Im Übergangs-Setup passt `src/GenehmigungWorker/appsettings.json` schon:
+Mit der Vorlage passt `src/GenehmigungWorker/appsettings.json` schon:
 
 | Schlüssel | Wert | Wann ihr ihn ändert |
 |---|---|---|
-| `EngineUrl` | `http://localhost:8080` | Engine auf einem anderen Port, später die Adresse eurer lokalen CIB flow Instanz. Immer ohne `/engine-rest`. |
-| `ProzessKey` | `Process_Genehmigung` | Mit eigenem Modell: dessen Process ID, z. B. `mm-genehmigung` |
+| `EngineUrl` | `http://localhost:8080` | Nur wenn die Engine auf einem anderen Port läuft. Immer ohne `/engine-rest`, der Code ruft `/engine-rest/...` auf. |
+| `ProzessKey` | `Process_Genehmigung` | Mit eigenem Projekt: dessen Process ID, z. B. `mm-genehmigung` |
 | `Topic` | `genehmigung-verbuchen` | Nie, es muss exakt wie im Modell heißen |
 | `WorkerId` | `genehmigung-worker-1` | Für eine zweite Worker-Instanz |
 
@@ -101,30 +120,7 @@ export EngineBenutzer=worker EnginePasswort=worker
 $env:EngineBenutzer = "worker"; $env:EnginePasswort = "worker"
 ```
 
-### 5. Projekt exportieren und importieren (erst mit CIB flow)
-
-Im Übergangs-Setup überspringt ihr diesen Schritt. Mit dem CIB flow Setup läuft er so:
-
-1. In der gemeinsamen CIB flow Umgebung exportiert ihr euer Projekt im Prozessmanagement als ZIP, mit dem Stand der Formulare von heute Vormittag.
-2. In der Prozessmanagement-Ansicht der lokalen Instanz importiert ihr die ZIP. easyForms und Ressourcen sind danach sofort da, das Diagramm muss noch in die Engine.
-3. Das BPMN aus dem Ordner `diagrams` der ZIP legt ihr als `prozess/genehmigungsworkflow.bpmn` ab. Diesen Pfad liest `Deploy.cs`.
-4. Die Process ID eures Modells tragt ihr als `ProzessKey` in `appsettings.json` ein. Prüft im Modell: Der Service Task „Genehmigung verbuchen“ ist External mit Topic `genehmigung-verbuchen`.
-5. Die ZIP enthält keine Benutzer und Gruppen. Euer lokaler Benutzer muss in der Gruppe `genehmiger` sein, sonst taucht „Antrag prüfen“ nicht in seiner Tasklist auf.
-
-### 6. Modell deployen
-
-```bash
-dotnet run --project src/GenehmigungWorker -- deploy
-```
-
-Im Ordner `src/GenehmigungWorker` genügt `dotnet run -- deploy`. Die Ausgabe nennt die neue Version:
-
-```
-Deployment 3f2a9c1e-... aus .../prozess/genehmigungsworkflow.bpmn
-Neue Version: Process_Genehmigung, Version 1
-```
-
-Ruft ihr `deploy` ein zweites Mal auf, meldet es `Modell unverändert, die Engine hat keine neue Version angelegt.` Das ist `enable-duplicate-filtering` von der Folie.
+Fehlen sie, bricht der Worker mit einer Meldung ab, die genau diese Befehle nennt. Gelesen wird in der Reihenfolge `appsettings.json`, User Secrets, Umgebungsvariablen, der spätere Wert gewinnt. So überschreibt ihr jeden Wert für einen Lauf, etwa mit `WorkerId=genehmigung-worker-2` für eine zweite Instanz. Der Prozesstest in Kapitel 12 liest dieselbe Konfiguration, auch dieselben User Secrets.
 
 ### 7. Worker starten
 
@@ -136,28 +132,34 @@ dotnet run --project src/GenehmigungWorker
 13:58:02 Worker genehmigung-worker-1 holt Tasks vom Topic genehmigung-verbuchen bei http://localhost:8080. Beenden mit Strg+C.
 ```
 
-Lasst dieses Terminal offen. Für die nächsten Schritte nehmt ihr den Browser und ein zweites Terminal.
+Der Worker holt bis zu fünf Tasks je Anfrage, hält die Anfrage per Long Polling bis zu zehn Sekunden offen und sperrt jeden Task für 30 Sekunden. Lasst dieses Terminal offen. Für die nächsten Schritte nehmt ihr den Browser und ein zweites Terminal.
 
 ### 8. Antrag stellen und genehmigen
 
-1. http://localhost:8080/webapp/ öffnen und als `anna` mit Passwort `anna` anmelden.
-2. „Prozess starten“, bei „Genehmigungsworkflow“ auf Starten klicken. Im Startformular „Betrag in Euro“ und „Grund des Antrags“ ausfüllen, dann „Starten“.
-3. Abmelden (oben rechts über den Namen) und als `gerda` mit Passwort `gerda` anmelden.
-4. Tasklist öffnen, links den Filter „Aufgaben meiner Gruppen“ wählen, dann die Aufgabe „Antrag prüfen“.
-5. „Mir zuweisen“ klicken, bei „Entscheidung“ `genehmigt` wählen und „Abschließen“ klicken.
+1. Oben rechts über den Namen abmelden und als `anna` mit Passwort `anna` anmelden.
+2. Kachel „Prozess starten“, bei „Genehmigungsworkflow“ auf „Starten“ klicken. Die Schaltfläche erscheint, wenn ihr mit der Maus über die Karte fahrt. In „Aufgaben bearbeiten“ gibt es dafür oben rechts ebenfalls „Prozess starten“.
+3. Im Startformular „Betrag in Euro“ und „Begründung“ ausfüllen, wer mag, legt unter „Anlage“ ein PDF dazu. „Abschließen“ klicken. Die Meldung „Prozess gestartet“ erscheint.
+4. Abmelden und als `gerda` mit Passwort `gerda` anmelden.
+5. Kachel „Aufgaben bearbeiten“, links den Filter „Aufgaben meiner Gruppen“ wählen, dann die Aufgabe „Antrag prüfen“.
+6. „Mir zuweisen“ klicken. Erst danach erscheint das Formular. Bei „Entscheidung“ „Genehmigt“ wählen und „Abschließen“ klicken.
 
 ### 9. Dem Worker zuschauen
 
 Wenige Sekunden nach dem Abschließen loggt der Worker den Task mit seinen Variablen:
 
 ```
-13:59:40 Task 9bb40e5d-... geholt: Business Key (keiner), Prozessinstanz 9b811764-..., Retries (noch keine)
+13:59:40 Task 39770f19-... geholt: Business Key (keiner), Prozessinstanz 240ce15c-..., Retries (noch keine)
+13:59:40   easyStartFormName = antragsformular
 13:59:40   antragsteller = anna
-13:59:40   betrag = 1200
+13:59:40   betrag = 1234.5
+13:59:40   initiator = anna
 13:59:40   entscheidung = genehmigt
-13:59:40   begruendung = Dienstreise zur Fachtagung
-14:00:10 Task 9bb40e5d-... geholt: Business Key (keiner), Prozessinstanz 9b811764-..., Retries (noch keine)
+13:59:40   begruendung = Fachtagung Prozessautomatisierung
+13:59:40   _locale = de
+14:00:10 Task 39770f19-... geholt: Business Key (keiner), Prozessinstanz 240ce15c-..., Retries (noch keine)
 ```
+
+`easyStartFormName`, `initiator` und `_locale` legen Startformular und CIB flow dazu, euer Worker braucht sie nicht. Die Anlage fehlt im Log: Datei-Variablen liefert fetchAndLock ohne Wert, der Worker lässt sie weg.
 
 Der Worker schickt noch kein `complete`. Nach 30 Sekunden läuft der Lock ab, und derselbe Task kommt erneut: die doppelte Auslieferung von der Folie „Warum Worker idempotent sein müssen“.
 
@@ -189,28 +191,51 @@ Strg+C im Terminal des Workers. Er meldet `Worker beendet.` Die Instanz wartet w
 
 - Auf eurer Instanz läuft nur euer Worker. `fetchAndLock` braucht deshalb nur das Topic, keinen weiteren Filter.
 - `antragsteller` legt das Start-Event selbst ab (`camunda:initiator`): Es ist der Benutzer, der den Prozess gestartet hat, hier `anna`.
-- `betrag` kommt als ganze Zahl an, weil das Feld im Startformular vom Typ `long` ist.
+- `betrag` kommt aus dem easyForm als Text, etwa `"1234.5"`, immer mit Punkt, auch wenn das Feld vom Typ „Zahl“ ist. Startet ihr per REST, etwa mit der http-Datei, kommt eine Zahl an. Wie der Handler mit beidem umgeht, steht in [Kapitel 12](kapitel-12-worker-und-tests.md#1-handler-schreiben).
 - Einen Business Key setzt das Startformular nicht, deshalb loggt der Worker `Business Key (keiner)`. Warum das in Kapitel 12 wichtig wird, zeigt die Folie „Der Handler“.
-- Solange euer Worker läuft, holt er auch die Tasks, die ihr mit der http-Datei (Schritte 6 und 7) oder dem Smoke-Test holen wollt. Stoppt ihn vorher.
-- Jeden Schritt einzeln als REST-Call seht ihr in `http/genehmigungsworkflow.http` (README, Abschnitt „Durchlauf mit der http-Datei“).
+- Der easyForm-Baustein setzt nach dem Start-Event und nach „Antrag prüfen“ je einen Speicherpunkt („Asynchronous continuations: After“). Die Engine antwortet dort schon, den Rest führt ihr Job Executor Sekundenbruchteile später aus. Die Aufgabe oder der External Task erscheinen deshalb einen Moment nach dem Klick.
+- Ändert ihr das Modell im Repo, spielt ihr es mit `dotnet run --project src/GenehmigungWorker -- deploy` ein. Sonst braucht ihr `deploy` nicht: Direkt nach dem Import der Rückfall-ZIP meldet es `Modell unverändert, die Engine hat keine neue Version angelegt.`, weil dasselbe Modell schon bereitsteht. `deploy` sucht `prozess/genehmigungsworkflow.bpmn` vom aktuellen Ordner aus nach oben und danach vom Programmordner aus, klappt also im Repo-Root, im Projektordner und aus der IDE. Weicht die Process ID des Modells von `ProzessKey` ab, weist `deploy` darauf hin. Die easyForms bringt `deploy` nicht mit, die kommen nur mit dem Projekt-ZIP.
+- Solange euer Worker läuft, holt er auch die Tasks, die ihr mit der http-Datei (Schritte 6 und 7) oder dem Smoke-Test holen wollt. Stoppt ihn vorher mit Strg+C. Seine letzte Long-Polling-Anfrage bleibt in der Engine noch bis zu zehn Sekunden offen und kann in dieser Zeit einen neuen Task sperren, dann für 30 Sekunden. Wartet deshalb nach dem Stoppen gut zehn Sekunden.
+
+## Durchlauf mit der http-Datei
+
+Jeden Schritt einzeln als REST-Aufruf zeigt `http/genehmigungsworkflow.http`. Öffnet die Datei in VS Code mit der Erweiterung REST Client. Über jedem Request steht „Send Request“. Klickt die Requests von oben nach unten, sie folgen den Folien:
+
+| Schritt | Request | Als |
+|---|---|---|
+| 1 | Engine-Version prüfen | `worker` |
+| 2 | BPMN aus `prozess/` deployen (`deployment/create`, multipart) | `worker` |
+| 3 | Prozess starten, die Engine legt `anna` in `antragsteller` ab | `anna` |
+| 4 | Aufgabe „Antrag prüfen“ finden | `gerda` |
+| 5 | Aufgabe mit `entscheidung` abschließen | `gerda` |
+| 6 | External Task holen (`fetchAndLock`, Topic `genehmigung-verbuchen`) | `worker` |
+| 7 | External Task mit `buchungsnummer` abschließen | `worker` |
+| 8 und 9 | History prüfen: Instanz `COMPLETED`, `buchungsnummer` gesetzt | `worker` |
+| B1 bis B5 | Bonus fachlicher Fehler in Kapitel 12: Variante deployen, mit Variablen starten, „Buchung klären“, Variablen und History prüfen | `worker`, `anna`, `gerda` |
+
+Spätere Requests lesen IDs aus den Antworten früherer Requests (`# @name`). Schickt ihr einen Request ab, bevor sein Vorgänger gelaufen ist, fehlt ihm diese ID, und er schlägt fehl. Für die anderen Pfade tragt ihr in Schritt 5 `abgelehnt` oder `nachbessern` ein. Dann entsteht kein External Task, und Schritt 6 liefert `[]`. Der Start per REST umgeht das Startformular: `betrag` kommt als Zahl an, eine Anlage gibt es nicht.
 
 ## Typische Stolpersteine
 
 | Was ihr seht | Woran es liegt, was ihr tut |
 |---|---|
-| `docker compose up -d` bricht ab mit `address already in use` | Port 8080 ist belegt. Lösung in der README unter „Fehlerbilder“. |
-| Webapp und REST-API antworten nicht | Die Engine startet noch. `docker compose ps` zeigt `health: starting`, wartet auf `healthy`. |
-| Der Worker bricht sofort ab: `Zugangsdaten für die Engine fehlen` | Schritt 4 fehlt, oder ihr habt Umgebungsvariablen in einem anderen Terminal gesetzt. User Secrets gelten überall. |
+| `docker compose up -d` bricht mit `unauthorized` oder `401` ab | Nicht bei `harbor.cib.de` angemeldet. `docker login harbor.cib.de` mit den Zugangsdaten aus der Setup-Mail. |
+| `docker compose up -d` meldet `port is already allocated` | Ein Port ist belegt. Lösung in [stack/README.md](../stack/README.md#typische-probleme). |
+| Weboberfläche oder REST-API antworten nicht | Der Stack startet noch. Wartet, bis `docker compose logs init` mit `[init] Fertig.` endet. |
+| `init` steht auf `Exited (1)` | `docker compose logs init` nennt den Grund. Ein weiteres `docker compose up -d` startet `init` noch einmal. |
+| `docker compose logs init` zeigt `set: line 9: illegal option -` | Das Skript hat Windows-Zeilenenden (CRLF). `.gitattributes` sorgt beim Klonen für LF. Hat ein Editor die Datei mit CRLF gespeichert: in VS Code unten rechts `CRLF` auf `LF` umstellen, speichern, `docker compose up -d`. Oder `git checkout -- stack/init/benutzer-anlegen.sh`. |
+| Der Worker bricht sofort ab: `Zugangsdaten für die Engine fehlen` | Schritt 6 fehlt, oder ihr habt Umgebungsvariablen in einem anderen Terminal gesetzt. User Secrets gelten überall. |
 | Der Worker endet mit `Response status code does not indicate success: 401.` | Benutzer oder Passwort falsch. `dotnet user-secrets list --project src/GenehmigungWorker` zeigt, was gesetzt ist. |
 | Der Worker endet mit `HttpRequestException` und `Connection refused` | Die Engine läuft nicht, oder `EngineUrl` zeigt woandershin. |
-| „Genehmigungsworkflow“ fehlt unter „Prozess starten“ | Das Modell ist nicht deployt. Schritt 6. |
+| Die Kachel „Prozess starten“ fehlt, oder „Genehmigungsworkflow“ ist nicht dabei | Das Projekt ist nicht importiert oder nicht bereitgestellt. Schritt 4. |
+| „Prozess starten“ meldet „Das Formular wurde nicht gefunden“ | Das Modell ist in der Engine, die easyForms fehlen, etwa nach einem `deploy` ohne Import. Importiert das Projekt-ZIP, Schritt 4. |
 | `deploy` meldet `prozess/genehmigungsworkflow.bpmn nicht gefunden` | Ihr startet außerhalb des Repos. Startet im Repo-Root oder in `src/GenehmigungWorker`. |
 | Die Instanz steht bei „Genehmigung verbuchen“, der Worker loggt nichts | Tippfehler im Topic, in `appsettings.json` oder im Modell. Der `curl`-Befehl aus Schritt 9 ohne `?topicName=...` zeigt alle wartenden External Tasks mit ihrem `topicName`. |
-| „Antrag prüfen“ fehlt in der Tasklist | Als `gerda` angemeldet? Filter „Aufgaben meiner Gruppen“ gewählt? Mit CIB flow: Ist euer Benutzer lokal in der Gruppe `genehmiger`? |
-| Das Formular von „Antrag prüfen“ ist ausgegraut | Die Aufgabe ist euch noch nicht zugewiesen. „Mir zuweisen“ klicken. |
-| Mit CIB flow: Die Engine läuft unter einem Pfad-Präfix, etwa `http://host/prefix/engine-rest` | Die Pfade im Code beginnen mit `/`, deshalb verwirft der `HttpClient` das Präfix aus `EngineUrl`. Setzt `EngineUrl` mit Präfix und abschließendem Slash und schreibt die Pfade im Code ohne führenden Slash. Im Übergangs-Setup gibt es kein Präfix. |
+| „Antrag prüfen“ fehlt in „Aufgaben bearbeiten“ | Als `gerda` angemeldet? Filter „Aufgaben meiner Gruppen“ gewählt? Mit eigenem Modell: Geht die Aufgabe an die Gruppe `genehmiger`? |
+| Das Formular von „Antrag prüfen“ bleibt leer | Oben steht „Aufgabe ist Ihnen nicht zugewiesen“. „Mir zuweisen“ klicken. |
+| Eure Engine läuft unter einem Pfad-Präfix, etwa `http://host/prefix/engine-rest` | Die Pfade im Code beginnen mit `/`, deshalb verwirft der `HttpClient` das Präfix aus `EngineUrl`. Setzt `EngineUrl` mit Präfix und abschließendem Slash und schreibt die Pfade im Code ohne führenden Slash. Im lokalen Stack gibt es kein Präfix. |
 
-Weitere Fehlerbilder rund um den Stack stehen in der [README](../README.md#fehlerbilder).
+Weitere Probleme rund um den Stack stehen in [stack/README.md](../stack/README.md#typische-probleme).
 
 ## Wer früher fertig ist
 

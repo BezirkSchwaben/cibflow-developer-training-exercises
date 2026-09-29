@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>GenehmigungWorker</RootNamespace>
-    <!-- Zugangsdaten per "dotnet user-secrets set ..." liegen außerhalb des Repos, siehe README -->
+    <!-- Zugangsdaten per "dotnet user-secrets set ..." liegen außerhalb des Repos, siehe aufgaben/kapitel-11-lokales-setup.md -->
     <UserSecretsId>cibflow-training-genehmigung-worker</UserSecretsId>
   </PropertyGroup>
 
