@@ -1,12 +1,18 @@
 # Prüft das Übungs-Repo bei jedem Push und Pull Request auf main.
 #
 #   startstand     Der Startstand (Ende der Übung in Kapitel 11) baut, und seine Tests laufen durch.
-#                  Die Tests mit TODO sind übersprungen, nicht rot.
-#   musterloesung  Übernimmt die Musterlösung aus loesung/ mit dem Befehl aus der README und prüft sie:
-#                  Build, Unit-Tests ohne Engine, lokaler Stack per Docker Compose,
+#                  Die Tests mit TODO sind übersprungen, nicht rot. Dazu: Das Projekt-ZIP passt zum Modell.
+#   musterloesung  Übernimmt die Musterlösung aus loesung/ mit dem Befehl aus dem Aufgabenblatt und prüft sie:
+#                  Build, Unit-Tests ohne Engine, Engine per Docker Compose,
 #                  Deployment mit "dotnet run -- deploy", Smoke-Test und die Prozesstests gegen die Engine.
 #
-# Die Zugangsdaten sind die lokalen Dev-Benutzer, die stack/init anlegt (worker/worker).
+# Warum die CI gegen reines CIB seven läuft und nicht gegen den CIB flow Stack aus stack/:
+# Die CIB flow Images liegen in einer privaten Registry (harbor.cib.de), die CI hat dafür keinen Zugang.
+# CIB flow läuft auf der Engine CIB seven, mit derselben REST-API. Worker, Deployment, Smoke-Test und
+# Prozesstests sprechen nur mit dieser REST-API, deshalb prüft .github/ci-stack/ sie genauso gut.
+# Die Formulare (easyForms) prüft die CI nicht, sie brauchen CIB flow.
+#
+# Die Zugangsdaten sind die lokalen Dev-Benutzer, die stack/init/benutzer-anlegen.sh anlegt (worker/worker).
 # Sie stehen auch in der README und sind keine Secrets.
 name: Build
 
@@ -51,6 +57,21 @@ jobs:
       - name: Tests ausführen (die TODO-Tests sind übersprungen)
         run: dotnet test GenehmigungWorker.sln --no-build --logger "console;verbosity=normal"
 
+      - name: Projekt-ZIP passt zum Modell
+        run: |
+          # Das BPMN im Rückfall-ZIP muss byte-gleich prozess/genehmigungsworkflow.bpmn sein
+          if ! unzip -p prozess/genehmigungsworkflow-projekt.zip diagrams/genehmigungsworkflow.bpmn \
+              | cmp -s - prozess/genehmigungsworkflow.bpmn; then
+            echo "::error::Das BPMN im Projekt-ZIP weicht von prozess/genehmigungsworkflow.bpmn ab. Neu bauen: python3 prozess/projekt-zip-bauen.py"
+            exit 1
+          fi
+          # Und das ganze ZIP muss sich aus Modell und Formularen genau so neu bauen lassen
+          python3 prozess/projekt-zip-bauen.py "$RUNNER_TEMP/projekt.zip"
+          if ! cmp -s "$RUNNER_TEMP/projekt.zip" prozess/genehmigungsworkflow-projekt.zip; then
+            echo "::error::Das Projekt-ZIP ist nicht aktuell. Neu bauen: python3 prozess/projekt-zip-bauen.py"
+            exit 1
+          fi
+
   musterloesung:
     name: Musterlösung gegen die lokale Engine
     runs-on: ubuntu-latest
@@ -75,12 +96,12 @@ jobs:
       - name: Unit-Tests ohne Engine und ohne Zugangsdaten
         run: dotnet test GenehmigungWorker.sln --no-build --filter "Kategorie!=Prozesstest" --logger "console;verbosity=normal"
 
-      - name: Stack starten
-        working-directory: stack
+      - name: Engine starten (CIB seven, siehe oben)
+        working-directory: .github/ci-stack
         run: docker compose up -d
 
       - name: Warten, bis init Benutzer, Gruppe und Filter angelegt hat
-        working-directory: stack
+        working-directory: .github/ci-stack
         timeout-minutes: 13
         run: |
           # init wartet selbst bis zu zehn Minuten auf die Engine und beendet sich dann.
@@ -121,14 +142,14 @@ jobs:
           EnginePasswort: worker
         run: dotnet test GenehmigungWorker.sln --no-build --filter "Kategorie=Prozesstest" --logger "console;verbosity=normal"
 
-      - name: Zustand des Stacks bei Fehler
+      - name: Zustand der Engine bei Fehler
         if: failure()
-        working-directory: stack
+        working-directory: .github/ci-stack
         run: |
           docker compose ps -a
           docker compose logs --tail 200
 
-      - name: Stack abbauen
+      - name: Engine abbauen
         if: always()
-        working-directory: stack
+        working-directory: .github/ci-stack
         run: docker compose down -v

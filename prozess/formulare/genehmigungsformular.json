@@ -1,0 +1,231 @@
+{
+  "content": [
+    {
+      "groups": [
+        {
+          "elements": [
+            {
+              "type": "select",
+              "counter": 1,
+              "id": "entscheidung",
+              "label": "Entscheidung",
+              "description": "",
+              "value": null,
+              "selected": false,
+              "validation": {
+                "valid": null,
+                "message": "",
+                "required": true
+              },
+              "optional": [],
+              "disabled": false,
+              "styles": {
+                "grid": {
+                  "options": [
+                    1,
+                    3,
+                    4,
+                    6,
+                    9,
+                    12
+                  ],
+                  "genericSelected": -1,
+                  "mobileSelected": 5,
+                  "position": ""
+                },
+                "classes": {},
+                "style": {},
+                "labelClasses": {}
+              },
+              "groupStyles": {
+                "alignment": "",
+                "maxWidth": {
+                  "type": "%",
+                  "value": ""
+                },
+                "disabledGrid": false,
+                "alignmentContent": "",
+                "gap": 0,
+                "card": false
+              },
+              "collapsible": {
+                "enable": false,
+                "translations": {
+                  "de": {
+                    "header": "",
+                    "info": ""
+                  },
+                  "en": {
+                    "header": "",
+                    "info": ""
+                  },
+                  "es": {
+                    "header": "",
+                    "info": ""
+                  }
+                },
+                "isVisible": true
+              },
+              "translationsReviewed": "",
+              "tabId": null,
+              "stepId": null,
+              "saveType": "",
+              "elements": [],
+              "translations": {
+                "de": {
+                  "label": "Entscheidung",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                },
+                "en": {
+                  "label": "",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                },
+                "es": {
+                  "label": "",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                }
+              },
+              "refVariable": [],
+              "stacked": false,
+              "placeholder": "",
+              "config": {
+                "select": {
+                  "sendEvent": false
+                },
+                "inputEvent": {
+                  "sendEvent": false,
+                  "correlateMsgs": false,
+                  "refreshTask": false,
+                  "refreshComponents": false,
+                  "refreshComponentIds": [],
+                  "saveForm": false,
+                  "skipValidation": false
+                }
+              },
+              "options": [
+                {
+                  "value": "genehmigt",
+                  "text": "Genehmigt",
+                  "translations": {
+                    "de": "Genehmigt",
+                    "en": "",
+                    "es": ""
+                  }
+                },
+                {
+                  "value": "abgelehnt",
+                  "text": "Abgelehnt",
+                  "translations": {
+                    "de": "Abgelehnt",
+                    "en": "",
+                    "es": ""
+                  }
+                },
+                {
+                  "value": "nachbessern",
+                  "text": "Nachbessern",
+                  "translations": {
+                    "de": "Nachbessern",
+                    "en": "",
+                    "es": ""
+                  }
+                }
+              ]
+            }
+          ],
+          "selected": false,
+          "tabId": null,
+          "optional": [],
+          "stepId": null,
+          "groupStyles": {
+            "alignment": "",
+            "maxWidth": {
+              "type": "%",
+              "value": ""
+            },
+            "disabledGrid": false,
+            "alignmentContent": "",
+            "gap": 0,
+            "card": false
+          },
+          "collapsible": {
+            "enable": false,
+            "translations": {
+              "de": {
+                "header": "",
+                "info": ""
+              },
+              "en": {
+                "header": "",
+                "info": ""
+              },
+              "es": {
+                "header": "",
+                "info": ""
+              }
+            },
+            "isVisible": true
+          }
+        }
+      ],
+      "classes": {
+        "col-12": true,
+        "bg-white": true
+      },
+      "style": {}
+    }
+  ],
+  "tabs": [],
+  "steps": [],
+  "config": {
+    "canDetailsColumnCollapse": false,
+    "isDetailsColumnCollapsed": false,
+    "alignment": "",
+    "maxWidth": {
+      "type": "%",
+      "value": ""
+    },
+    "ocr": {
+      "enabled": false
+    },
+    "events": {
+      "onLoad": {
+        "message": "",
+        "correlateMsgs": false
+      },
+      "onDestroy": {
+        "message": "",
+        "correlateMsgs": false
+      }
+    },
+    "footer": {
+      "content": [
+        {
+          "groups": [
+            {
+              "elements": [],
+              "selected": false
+            }
+          ]
+        }
+      ]
+    },
+    "layout": {
+      "type": "standard",
+      "independentLayouts": false
+    }
+  },
+  "productVersion": "3.1.3"
+}

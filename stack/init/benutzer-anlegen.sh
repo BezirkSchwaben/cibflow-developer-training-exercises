@@ -1,14 +1,15 @@
 #!/bin/sh
-# Legt die Schulungsbenutzer und die Gruppe genehmiger in CIB seven an.
+# Legt die Schulungsbenutzer und die Gruppe genehmiger in der Engine an.
 #
-# Läuft im Compose-Dienst "init" (Image curlimages/curl, nur sh und curl).
+# Läuft im Compose-Dienst "init" (Image curlimages/curl, nur sh und curl):
+# in stack/ gegen CIB flow, in .github/ci-stack/ gegen CIB seven.
 # Idempotent: Was schon existiert, bleibt unverändert. Deshalb schadet ein
 # zweiter Lauf nicht, etwa nach "docker compose up -d" auf einem bestehenden Stack.
 #
 # Passwort jeweils gleich dem Benutzernamen. Nur lokal verwenden.
 set -eu
 
-ENGINE_URL="${ENGINE_URL:-http://cibseven:8080/engine-rest}"
+ENGINE_URL="${ENGINE_URL:-http://flow-cibseven-spring:8080/engine-rest}"
 ADMIN="${ADMIN_USER:-demo}:${ADMIN_PASSWORD:-demo}"
 MAX_VERSUCHE="${MAX_VERSUCHE:-120}"
 ANTWORT=/tmp/antwort.json

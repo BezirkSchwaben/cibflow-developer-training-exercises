@@ -1,0 +1,419 @@
+{
+  "content": [
+    {
+      "groups": [
+        {
+          "elements": [
+            {
+              "type": "number",
+              "counter": 1,
+              "id": "betrag",
+              "label": "Betrag in Euro",
+              "description": "",
+              "value": null,
+              "selected": false,
+              "validation": {
+                "valid": null,
+                "message": "",
+                "required": true,
+                "min": null,
+                "max": null
+              },
+              "optional": [],
+              "disabled": false,
+              "styles": {
+                "grid": {
+                  "options": [
+                    1,
+                    3,
+                    4,
+                    6,
+                    9,
+                    12
+                  ],
+                  "genericSelected": -1,
+                  "mobileSelected": 5,
+                  "position": ""
+                },
+                "classes": {},
+                "style": {},
+                "labelClasses": {}
+              },
+              "groupStyles": {
+                "alignment": "",
+                "maxWidth": {
+                  "type": "%",
+                  "value": ""
+                },
+                "disabledGrid": false,
+                "alignmentContent": "",
+                "gap": 0,
+                "card": false
+              },
+              "collapsible": {
+                "enable": false,
+                "translations": {
+                  "de": {
+                    "header": "",
+                    "info": ""
+                  },
+                  "en": {
+                    "header": "",
+                    "info": ""
+                  },
+                  "es": {
+                    "header": "",
+                    "info": ""
+                  }
+                },
+                "isVisible": true
+              },
+              "translationsReviewed": "",
+              "tabId": null,
+              "stepId": null,
+              "saveType": "",
+              "elements": [],
+              "translations": {
+                "de": {
+                  "label": "Betrag in Euro",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                },
+                "en": {
+                  "label": "",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                },
+                "es": {
+                  "label": "",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                }
+              },
+              "stacked": false,
+              "placeholder": "",
+              "config": {
+                "adornment": {
+                  "enabled": false,
+                  "text": "",
+                  "position": "prepend"
+                },
+                "inputEvent": {
+                  "sendEvent": false,
+                  "correlateMsgs": false,
+                  "refreshTask": false,
+                  "refreshComponents": false,
+                  "refreshComponentIds": [],
+                  "saveForm": false,
+                  "skipValidation": false,
+                  "eventMode": "change"
+                }
+              }
+            },
+            {
+              "type": "textarea",
+              "counter": 1,
+              "id": "begruendung",
+              "label": "Begründung",
+              "description": "",
+              "value": "",
+              "selected": false,
+              "validation": {
+                "valid": null,
+                "message": "",
+                "required": true,
+                "maxlength": null,
+                "minlength": null
+              },
+              "optional": [],
+              "disabled": false,
+              "styles": {
+                "grid": {
+                  "options": [
+                    1,
+                    3,
+                    4,
+                    6,
+                    9,
+                    12
+                  ],
+                  "genericSelected": -1,
+                  "mobileSelected": 5,
+                  "position": ""
+                },
+                "classes": {},
+                "style": {},
+                "labelClasses": {}
+              },
+              "groupStyles": {
+                "alignment": "",
+                "maxWidth": {
+                  "type": "%",
+                  "value": ""
+                },
+                "disabledGrid": false,
+                "alignmentContent": "",
+                "gap": 0,
+                "card": false
+              },
+              "collapsible": {
+                "enable": false,
+                "translations": {
+                  "de": {
+                    "header": "",
+                    "info": ""
+                  },
+                  "en": {
+                    "header": "",
+                    "info": ""
+                  },
+                  "es": {
+                    "header": "",
+                    "info": ""
+                  }
+                },
+                "isVisible": true
+              },
+              "translationsReviewed": "",
+              "tabId": null,
+              "stepId": null,
+              "saveType": "",
+              "elements": [],
+              "translations": {
+                "de": {
+                  "label": "Begründung",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                },
+                "en": {
+                  "label": "",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                },
+                "es": {
+                  "label": "",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                }
+              },
+              "stacked": false,
+              "placeholder": "",
+              "config": {
+                "inputEvent": {
+                  "sendEvent": false,
+                  "correlateMsgs": false,
+                  "refreshTask": false,
+                  "refreshComponents": false,
+                  "refreshComponentIds": [],
+                  "saveForm": false,
+                  "skipValidation": false,
+                  "eventMode": "change"
+                }
+              }
+            },
+            {
+              "type": "attachment",
+              "counter": 1,
+              "id": "anlage",
+              "label": "Anlage",
+              "description": "",
+              "value": null,
+              "selected": false,
+              "validation": {
+                "valid": null,
+                "message": "",
+                "required": false
+              },
+              "optional": [],
+              "disabled": false,
+              "styles": {
+                "grid": {
+                  "options": [
+                    1,
+                    3,
+                    4,
+                    6,
+                    9,
+                    12
+                  ],
+                  "genericSelected": -1,
+                  "mobileSelected": 5,
+                  "position": ""
+                },
+                "classes": {},
+                "style": {},
+                "labelClasses": {}
+              },
+              "groupStyles": {
+                "alignment": "",
+                "maxWidth": {
+                  "type": "%",
+                  "value": ""
+                },
+                "disabledGrid": false,
+                "alignmentContent": "",
+                "gap": 0,
+                "card": false
+              },
+              "collapsible": {
+                "enable": false,
+                "translations": {
+                  "de": {
+                    "header": "",
+                    "info": ""
+                  },
+                  "en": {
+                    "header": "",
+                    "info": ""
+                  },
+                  "es": {
+                    "header": "",
+                    "info": ""
+                  }
+                },
+                "isVisible": true
+              },
+              "translationsReviewed": "",
+              "tabId": null,
+              "stepId": null,
+              "saveType": "",
+              "elements": [],
+              "translations": {
+                "de": {
+                  "label": "Anlage",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                },
+                "en": {
+                  "label": "",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                },
+                "es": {
+                  "label": "",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                }
+              },
+              "multifile": false,
+              "displayType": "list",
+              "accept": [],
+              "stacked": false,
+              "config": {
+                "attachment": {
+                  "maxSize": 0
+                }
+              }
+            }
+          ],
+          "selected": false,
+          "tabId": null,
+          "optional": [],
+          "stepId": null,
+          "groupStyles": {
+            "alignment": "",
+            "maxWidth": {
+              "type": "%",
+              "value": ""
+            },
+            "disabledGrid": false,
+            "alignmentContent": "",
+            "gap": 0,
+            "card": false
+          },
+          "collapsible": {
+            "enable": false,
+            "translations": {
+              "de": {
+                "header": "",
+                "info": ""
+              },
+              "en": {
+                "header": "",
+                "info": ""
+              },
+              "es": {
+                "header": "",
+                "info": ""
+              }
+            },
+            "isVisible": true
+          }
+        }
+      ],
+      "classes": {
+        "col-12": true,
+        "bg-white": true
+      },
+      "style": {}
+    }
+  ],
+  "tabs": [],
+  "steps": [],
+  "config": {
+    "canDetailsColumnCollapse": false,
+    "isDetailsColumnCollapsed": false,
+    "alignment": "",
+    "maxWidth": {
+      "type": "%",
+      "value": ""
+    },
+    "ocr": {
+      "enabled": false
+    },
+    "events": {
+      "onLoad": {
+        "message": "",
+        "correlateMsgs": false
+      },
+      "onDestroy": {
+        "message": "",
+        "correlateMsgs": false
+      }
+    },
+    "footer": {
+      "content": [
+        {
+          "groups": [
+            {
+              "elements": [],
+              "selected": false
+            }
+          ]
+        }
+      ]
+    },
+    "layout": {
+      "type": "standard",
+      "independentLayouts": false
+    }
+  },
+  "productVersion": "3.1.3"
+}

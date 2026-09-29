@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Logging der Engine, flow-cibseven.yaml verweist darauf (logging.config).
+  Unverändert aus der CIB-Vorlage: nur Konsole, "docker compose logs flow-cibseven-spring" zeigt alles.
+-->
+<Configuration status="WARN">
+    <Properties>
+        <Property name="taskFormat">%5p %d{dd.MM.yy HH:mm:ss} [%X{activityName}] [%X{processId}] %m%n</Property>
+    </Properties>
+
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${taskFormat}" />
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <Root level="ERROR">
+            <AppenderRef ref="Console"/>
+        </Root>
+        <Logger name="de.cib.cibflow" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console" />
+        </Logger>
+        <Logger name="org.cibseven" level="INFO" additivity="false">
+            <AppenderRef ref="Console" />
+        </Logger>
+    </Loggers>
+</Configuration>

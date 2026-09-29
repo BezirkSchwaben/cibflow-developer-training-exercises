@@ -1,0 +1,59 @@
+# easyForm (easy-form): Formular-Editor und Formularspeicher.
+#
+# Für die Schulung geändert gegenüber der CIB-Vorlage:
+#   - SSO und die Übersetzungsdienste (DeepL, ChatGPT) entfernt, sie laufen lokal nicht
+# Adressen und JWT-Schlüssel kommen aus common-config.yaml.
+server:
+  servlet:
+    context-path: /easy-form
+
+spring:
+  banner:
+    location: classpath:easyform-banner.txt
+  config:
+    import:
+      - optional:classpath:common-config.yaml
+      - optional:classpath:easy-form-local.yaml
+      - optional:classpath:easy-form.yaml
+  datasource:
+    url: jdbc:h2:file:/opt/cib/data/easyform;DB_CLOSE_DELAY=-1
+    username: ${common.database.h2.username}
+    password: ${common.database.h2.password}
+    driver-class-name: ${common.database.h2.driver-class-name}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: ${common.database.h2.hibernate.ddl-auto}
+      database-platform: ${common.database.h2.hibernate.dialect}
+  flyway:
+    # Flyway is the single source of truth for schema management and migrations
+    enabled: ${common.database.flyway.enabled}
+
+springdoc:
+  # easyform server url for the swagger-ui. Only needs to be set if the automatic detection is wrong.
+  easyform:
+    serverUrl: ""
+
+api:
+  common:
+    title: "CIB Flow Easy Form API"
+    description: "This API exposes the functionality of CIB Flow Easy Form as a REST service."
+
+cibseven:
+  webclient:
+    url: ${common.services.flow-webclient.url}
+    authentication:
+      jwtSecret: ${common.jwt.secret}
+      tokenValidMinutes: ${common.jwt.tokenValidMinutes}
+      tokenProlongMinutes: ${common.jwt.tokenProlongMinutes}
+    user:
+      provider: ${common.user.genericProvider}
+
+easyform:
+  css:
+    url: ${common.services.flow-webclient.external-url}/css
+  deleteForms:
+    keepPeriodInDays: 30
+    cron: "0 0 0 * * ?"
+  resource:
+    url: ${common.services.flow-resource.url}

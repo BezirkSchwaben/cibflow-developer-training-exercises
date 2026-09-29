@@ -1,0 +1,57 @@
+# Ressourcen (flow-resource): Dateien unter resources/ eines Projekts.
+#
+# Für die Schulung geändert gegenüber der CIB-Vorlage:
+#   - SSO, Documentserver und doXiview entfernt, sie laufen lokal nicht
+# Adressen und JWT-Schlüssel kommen aus common-config.yaml.
+server:
+  servlet:
+    context-path: /flow-resource
+
+spring:
+  banner:
+    location: classpath:flow-resource-banner.txt
+  config:
+    import:
+      - optional:classpath:common-config.yaml
+      - optional:classpath:flow-resource-local.yaml
+      - optional:classpath:flow-resource.yaml
+  datasource:
+    url: jdbc:h2:file:/opt/cib/data/flowresource;DB_CLOSE_DELAY=-1
+    username: ${common.database.h2.username}
+    password: ${common.database.h2.password}
+    driver-class-name: ${common.database.h2.driver-class-name}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: ${common.database.h2.hibernate.ddl-auto}
+    database-platform: ${common.database.h2.hibernate.dialect}
+  flyway:
+    # Flyway is the single source of truth for schema management and migrations
+    enabled: ${common.database.flyway.enabled}
+
+springdoc:
+  # flowresource server url for the swagger-ui. Only needs to be set if the automatic detection is wrong.
+  flowresource:
+    serverUrl: ""
+
+api:
+  common:
+    title: "CIB Flow Resource API"
+    description: "This API exposes the functionality of CIB Flow Resource as a REST service."
+
+# This is use in the UserProvider to regenerate the token so it is a service Url.
+cibseven:
+  webclient:
+    url: ${common.services.flow-webclient.url}
+    # User providers
+    user:
+      provider: ${common.user.genericProvider}
+    authentication:
+      jwtSecret: ${common.jwt.secret}
+      tokenValidMinutes: ${common.jwt.tokenValidMinutes}
+      tokenProlongMinutes: ${common.jwt.tokenProlongMinutes}
+
+flowresource:
+  css:
+    url: ${common.services.flow-webclient.external-url}/css
+  historicMaxResults: 30

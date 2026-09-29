@@ -1,0 +1,78 @@
+# Engine (flow-cibseven-spring): CIB seven mit REST-API unter /engine-rest.
+#
+# Für die Schulung geändert gegenüber der CIB-Vorlage:
+#   - Autorisierung aus, wie in common-config.yaml
+#   - Keycloak, LDAP und Microsoft Graph nur noch als "aus", ohne Verbindungsdaten
+# Benutzer liegen in der H2-Datenbank der Engine, Admin demo/demo.
+camunda:
+  bpm:
+    oauth2:
+      identity-provider:
+        enabled: false
+    admin-user:
+      id: demo
+      password: demo
+      firstName: Demo
+    filter:
+      create: All tasks
+    authorization:
+      # Schulung: aus (Vorlage: true)
+      enabled: false
+    database:
+      schema-update: true
+    default-number-of-retries: 3
+    default-serialization-format: application/json
+    generic-properties:
+      properties:
+        useCibSevenNamespaceInReflection: true
+        useCibSevenNamespaceInScripting: true
+    history-level: full
+    job-execution:
+      core-pool-size: 3
+      deployment-aware: false
+      lock-time-in-millis: 1200000
+      max-pool-size: 10
+      max-wait: 60000
+      wait-time-in-millis: 500
+    job-executor-acquire-by-priority: false
+    management.health.camunda.enabled: true
+    metrics:
+      db-reporter-activate: true
+      enabled: true
+    rest-api:
+      fetch-and-lock:
+        queue-capacity: 200
+        unique-worker-request: false
+    run:
+      admin-auth:
+        enabled: false
+        administrator-group-name: camunda-admin
+        administrator-user-name: demo
+        authorization-enabled: true
+      identity:
+        keycloak:
+          enabled: false
+        ldap:
+          enabled: false
+        msgraph:
+          enabled: false
+    webapp:
+      application-path: /camunda
+      enabled: true
+      index-redirect-enabled: false
+cibseven:
+  webclient:
+    enabled: false
+logging:
+  config: file:///opt/cib/conf/log4j2.xml
+spring:
+  config:
+    import:
+      - optional:classpath:common-config.yaml
+  datasource:
+    driver-class-name: org.h2.Driver
+    password: sa
+    url: jdbc:h2:file:/opt/cib/data/flow-cibseven;DB_CLOSE_DELAY=-1
+    username: sa
+  lifecycle:
+    timeout-per-shutdown-phase: 120

@@ -1,0 +1,119 @@
+# Gemeinsame Konfiguration aller CIB flow Dienste, jeder Dienst importiert diese Datei.
+#
+# Für die Schulung geändert gegenüber der CIB-Vorlage:
+#   - eigener JWT-Schlüssel, nur für den lokalen Stack (steht auch in cibflow-plugins.properties)
+#   - Engine-Adresse im Browser http://localhost:8080, wie EngineUrl im Worker
+#   - Autorisierung aus (ganz unten)
+#   - SSO/Keycloak und der Documentserver entfernt, beides läuft lokal nicht
+common:
+  bpm:
+    provider: de.cib.cibflow.camunda.providers.SevenProviderExtended
+  user:
+    # Benutzer und Gruppen liegen in der Engine
+    provider: org.cibseven.webapp.auth.SevenUserProvider
+    genericProvider: org.cibseven.webapp.auth.GenericUserProvider
+
+  # JWT Authentication Configuration
+  jwt:
+    # Schulung: eigener Schlüssel, nur lokal. Nie für eine echte Umgebung verwenden.
+    secret: 0eb49dd5349dcd8620ab00c0e1568347070149d209bda7b23eee440e9462d543981e1dc4374df057ccdfde0512d36d2eced0f446f1bf17d96fecd379197f0bb0
+    tokenValidMinutes: 480
+    tokenProlongMinutes: 1440
+
+  # Service URLs: url im Compose-Netz, external-url für den Browser
+  services:
+    flow-webclient:
+      url: http://flow-webclient:8080/client
+      external-url: http://localhost:7083/client
+
+    flow-modeler:
+      url: http://flow-modeler:8080/flow-modeler
+      external-url: http://localhost:7088/flow-modeler
+
+    flow-resource:
+      url: http://flow-resource:8080/flow-resource
+      external-url: http://localhost:7090/flow-resource
+
+    flow-process-management:
+      url: http://flow-process-management:8080/flow-process-management
+      external-url: http://localhost:7089/flow-process-management
+
+    easy-form:
+      url: http://easy-form:8080/easy-form
+      external-url: http://localhost:7086/easy-form
+
+    ui-element-template:
+      url: http://ui-element-template:8080/ui-element-templates
+      external-url: http://localhost:7091/ui-element-templates
+
+    flow-cibseven:
+      url: http://flow-cibseven-spring:8080
+      # Schulung: Port 8080 statt 8088
+      external-url: http://localhost:8080
+
+    # Läuft im Schulungs-Stack nicht mit. ui-element-templates.yaml verweist trotzdem darauf.
+    und-service:
+      url: http://und-service:8080/und-service
+
+  # Database Configuration Defaults
+  database:
+    h2:
+      username: sa
+      password: sa
+      driver-class-name: org.h2.Driver
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        ddl-auto: validate
+    flyway:
+      enabled: true
+
+  # Common API Information
+  api:
+    common:
+      title: "CIB Flow API"
+      description: "This API exposes the functionality of CIB Flow as a REST service."
+      termsOfService: "https://www.cib.de"
+      license: "Proprietary License of CIB software GmbH"
+      licenseUrl: "https://www.cib.de"
+      contact:
+        name: "CIB software GmbH"
+        url: "https://www.cib.de"
+        email: "support@cib.de"
+
+  # Common Management/Actuator Configuration
+  management:
+    endpoints:
+      enabled-by-default: false
+      web:
+        exposure:
+          include: health,info
+    endpoint:
+      info:
+        enabled: true
+      health:
+        enabled: true
+        probes:
+          enabled: true
+    info:
+      build:
+        enabled: true
+      git:
+        enabled: true
+        mode: full
+      java:
+        enabled: true
+
+  # Common Spring Configuration
+  spring:
+    servlet:
+      multipart:
+        max-file-size: 100MB
+        max-request-size: 1GB
+
+# Schulung: Autorisierung aus. Wirkt in Engine, Webclient und allen Werkzeugen,
+# weil alle Dienste diese Datei importieren. Jeder angemeldete Benutzer darf alles,
+# die Anmeldung bleibt Pflicht.
+camunda:
+  bpm:
+    authorization:
+      enabled: false

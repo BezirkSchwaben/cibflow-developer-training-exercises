@@ -1,0 +1,95 @@
+# UI Element Templates (ui-element-template): zeigt die easyForms beim Prozessstart und in den Aufgaben.
+#
+# Für die Schulung geändert gegenüber der CIB-Vorlage:
+#   - Dataflow und Dokumentvorschau ausdrücklich aus, beides bräuchte Dienste, die lokal nicht laufen
+#     (die Vorgaben im Image schalten beides ein)
+#   - SSO, Webforms, doXiview, Documentserver, Exchange, coSys, Webdesk und AccessStorage entfernt,
+#     die Schulung nutzt sie nicht
+#   - Lizenzdatei nicht eingebunden
+# Adressen und JWT-Schlüssel kommen aus common-config.yaml.
+server:
+  servlet:
+    context-path: /ui-element-templates
+
+spring:
+  banner:
+    location: classpath:uiet-banner.txt
+  config:
+    import:
+      - optional:classpath:common-config.yaml
+      - optional:classpath:external-forms.properties
+      - optional:classpath:version.yaml
+      - optional:classpath:environment-config.yaml
+      - optional:classpath:ui-element-templates-local.yaml
+      - optional:classpath:ui-element-templates.yaml
+
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          no-store: true
+          no-cache: true
+          must-revalidate: true
+
+springdoc:
+  # ui-element-template server url for the swagger-ui. Only needs to be set if the automatic detection is wrong.
+  ui-element-template:
+    serverUrl: ""
+
+api:
+  common:
+    title: "CIB Flow UI Element Template API"
+    description: "This API exposes the functionality of CIB Flow UI Element Template as a REST service."
+
+cibseven:
+  webclient:
+    # BPM Provider
+    bpm:
+      provider: ${common.bpm.provider}
+    engineRest:
+      url: ${common.services.flow-cibseven.url}
+    url: ${common.services.flow-webclient.external-url}
+    serviceUrl: ${common.services.flow-webclient.url}
+    # Token generation
+    authentication:
+      tokenValidMinutes: ${common.jwt.tokenValidMinutes}
+      tokenProlongMinutes: ${common.jwt.tokenProlongMinutes}
+      jwtSecret: ${common.jwt.secret}
+    # User providers
+    user:
+      provider: ${common.user.genericProvider}
+    admin:
+      url: ${common.services.flow-cibseven.external-url}/camunda/api/admin
+
+# UND Service
+und:
+  url: ${common.services.und-service.url}
+  url_get: ${common.services.und-service.url}/file
+
+uiet:
+  flow:
+    url: ${common.services.flow-webclient.external-url}
+    serviceUrl: ${common.services.flow-webclient.url}
+  url: ${common.services.ui-element-template.external-url}
+  resource:
+    url: ${common.services.flow-resource.external-url}
+    serviceUrl: ${common.services.flow-resource.url}
+  # Schulung: keine Vorschau, sie bräuchte den Documentserver. Anlagen erscheinen als Liste zum Herunterladen.
+  preview:
+    enabled: false
+
+  # External client
+  external:
+    uiUrl: ${common.services.ui-element-template.external-url}
+
+  easyform:
+    url: ${common.services.easy-form.external-url}
+    backendUrl: ${common.services.easy-form.url}
+
+# Schulung: aus (Vorgabe im Image: an). Anlagen landen als Datei-Variable in der Engine.
+dataflow:
+  enable: false
+flow:
+  datasource:
+    fileValue:
+      enabled: false

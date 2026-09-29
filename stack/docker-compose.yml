@@ -1,67 +1,124 @@
-# Übergangs-Setup für den Entwickler-Track: CIB seven Run mit PostgreSQL.
-# Das CIB flow Setup ersetzt diesen Ordner später.
+# CIB flow für den Entwickler-Track: Engine, Weboberfläche und Werkzeuge auf eurem Laptop.
 # Nur für die lokale Schulung, nicht produktiv verwenden.
 #
-# Starten:   docker compose up -d     (Podman: podman compose up -d)
+# Vorher einmal: docker login harbor.cib.de   (Zugangsdaten aus der Setup-Mail)
+# Starten:   docker compose up -d
 # Stoppen:   docker compose down
-# Zurück auf null (löscht die Datenbank): docker compose down -v
+# Zurück auf null (löscht Deployments, Formulare, Benutzer): docker compose down -v
+#
+# Alle Ports hören nur auf 127.0.0.1, von außen ist nichts erreichbar.
 name: cibflow-training
+
+# Gemeinsame Einstellungen der sieben CIB flow Dienste.
+# Die Images gibt es nur für linux/amd64, auf Apple Silicon laufen sie emuliert.
+x-flow-dienst: &flow-dienst
+  platform: linux/amd64
+  restart: unless-stopped
+  depends_on:
+    rechte:
+      condition: service_completed_successfully
 
 services:
 
-  postgres:
-    image: docker.io/library/postgres:18.6-alpine
-    environment:
-      POSTGRES_DB: cibseven
-      POSTGRES_USER: cibseven
-      POSTGRES_PASSWORD: cibseven
-    volumes:
-      # Ab PostgreSQL 18 liegt das Datenverzeichnis unter /var/lib/postgresql/18/docker,
-      # deshalb wird /var/lib/postgresql eingebunden und nicht .../data.
-      - postgres-daten:/var/lib/postgresql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cibseven -d cibseven"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    restart: unless-stopped
-    # Kein Port nach außen: Nur die Engine im selben Compose-Netz spricht mit der Datenbank.
-
-  cibseven:
-    image: docker.io/cibseven/cibseven:run-2.2.0
-    depends_on:
-      postgres:
-        condition: service_healthy
+  # Engine: CIB seven mit REST-API unter http://localhost:8080/engine-rest
+  flow-cibseven-spring:
+    <<: *flow-dienst
+    image: harbor.cib.de/partner-miragon/images/flow-cibseven-spring:7.1.1
     ports:
-      - "8080:8080"
-    environment:
-      DB_DRIVER: org.postgresql.Driver
-      DB_URL: jdbc:postgresql://postgres:5432/cibseven
-      DB_USERNAME: cibseven
-      DB_PASSWORD: cibseven
-      WAIT_FOR: postgres:5432
-      WAIT_FOR_TIMEOUT: 60
+      - "127.0.0.1:8080:8080"
     volumes:
-      # Eigene Run-Konfiguration: REST mit Anmeldung, Webapps, Admin demo/demo
-      - ./cibseven/default.yml:/camunda/configuration/default.yml:ro
-    healthcheck:
-      # healthy, sobald die REST-API mit Anmeldung antwortet (/actuator/health liefert in Run 2.2.0 404)
-      test: ["CMD-SHELL", "curl -fsS -o /dev/null -u demo:demo http://localhost:8080/engine-rest/version || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-      start_period: 60s
-    restart: unless-stopped
+      - ./config/flow-cibseven.yaml:/opt/cib/conf/flow-cibseven.yaml:ro
+      - ./config/common-config.yaml:/opt/cib/conf/common-config.yaml:ro
+      - ./config/cibflow-plugins.properties:/opt/cib/conf/cibflow-plugins.properties:ro
+      - ./config/cibseven-webclient.properties:/opt/cib/conf/cibseven-webclient.properties:ro
+      - ./config/log4j2.xml:/opt/cib/conf/log4j2.xml:ro
+      - engine-daten:/opt/cib/data
 
-  # Läuft einmal nach dem Start, legt Benutzer, die Gruppe genehmiger und zwei Tasklist-Filter an
-  # und beendet sich.
+  # Weboberfläche: http://localhost:7083/client
+  flow-webclient:
+    <<: *flow-dienst
+    image: harbor.cib.de/partner-miragon/images/flow-webclient:6.5.1
+    ports:
+      - "127.0.0.1:7083:8080"
+    volumes:
+      - ./config/cibflow-webclient.yaml:/opt/cib/conf/cibflow-webclient.yaml:ro
+      - ./config/common-config.yaml:/opt/cib/conf/common-config.yaml:ro
+
+  # Zeigt die easyForms beim Prozessstart und in den Aufgaben. Ohne diesen Dienst bleiben die Formulare leer.
+  ui-element-template:
+    <<: *flow-dienst
+    image: harbor.cib.de/partner-miragon/images/flow-ui-element-templates:5.4.6
+    ports:
+      - "127.0.0.1:7091:8080"
+    volumes:
+      - ./config/ui-element-templates.yaml:/opt/cib/conf/ui-element-templates.yaml:ro
+      - ./config/common-config.yaml:/opt/cib/conf/common-config.yaml:ro
+
+  # Formular-Editor und Formularspeicher
+  easy-form:
+    <<: *flow-dienst
+    image: harbor.cib.de/partner-miragon/images/easy-form:3.1.3
+    ports:
+      - "127.0.0.1:7086:8080"
+    volumes:
+      - ./config/easy-form.yaml:/opt/cib/conf/easy-form.yaml:ro
+      - ./config/common-config.yaml:/opt/cib/conf/common-config.yaml:ro
+      - easyform-daten:/opt/cib/data
+
+  # Modeler
+  flow-modeler:
+    <<: *flow-dienst
+    image: harbor.cib.de/partner-miragon/images/flow-modeler:3.0.13
+    ports:
+      - "127.0.0.1:7088:8080"
+    volumes:
+      - ./config/flow-modeler.yaml:/opt/cib/conf/flow-modeler.yaml:ro
+      - ./config/common-config.yaml:/opt/cib/conf/common-config.yaml:ro
+      - modeler-daten:/opt/cib/data
+
+  # Prozessmanagement: Projekt-ZIP importieren und bereitstellen
+  flow-process-management:
+    <<: *flow-dienst
+    image: harbor.cib.de/partner-miragon/images/flow-process-management:2.0.2
+    ports:
+      - "127.0.0.1:7089:8080"
+    volumes:
+      - ./config/flow-process-management.yaml:/opt/cib/conf/flow-process-management.yaml:ro
+      - ./config/common-config.yaml:/opt/cib/conf/common-config.yaml:ro
+      - pm-daten:/opt/cib/data
+
+  # Ressourcen eines Projekts (Ordner resources/ im Projekt-ZIP)
+  flow-resource:
+    <<: *flow-dienst
+    image: harbor.cib.de/partner-miragon/images/flow-resource:3.0.4
+    ports:
+      - "127.0.0.1:7090:8080"
+    volumes:
+      - ./config/flow-resource.yaml:/opt/cib/conf/flow-resource.yaml:ro
+      - ./config/common-config.yaml:/opt/cib/conf/common-config.yaml:ro
+      - resource-daten:/opt/cib/data
+
+  # Läuft einmal vor den Diensten: Die Werkzeuge laufen als Benutzer 1000 und
+  # brauchen Schreibrechte auf ihren Volumes.
+  rechte:
+    image: docker.io/library/busybox:1.37
+    command: ["sh", "-c", "chown -R 1000:1000 /v/modeler /v/pm /v/resource /v/easyform"]
+    volumes:
+      - modeler-daten:/v/modeler
+      - pm-daten:/v/pm
+      - resource-daten:/v/resource
+      - easyform-daten:/v/easyform
+    restart: "no"
+
+  # Läuft einmal nach dem Start, legt Benutzer, die Gruppe genehmiger und zwei Filter
+  # für "Aufgaben bearbeiten" an und beendet sich.
   # Mehrfaches Ausführen ist unkritisch: Was schon existiert, bleibt, wie es ist.
   init:
     image: docker.io/curlimages/curl:8.22.0
     depends_on:
-      - cibseven
+      - flow-cibseven-spring
     environment:
-      ENGINE_URL: http://cibseven:8080/engine-rest
+      ENGINE_URL: http://flow-cibseven-spring:8080/engine-rest
       ADMIN_USER: demo
       ADMIN_PASSWORD: demo
     volumes:
@@ -70,4 +127,8 @@ services:
     restart: "no"
 
 volumes:
-  postgres-daten:
+  engine-daten:
+  easyform-daten:
+  modeler-daten:
+  pm-daten:
+  resource-daten:

@@ -53,6 +53,20 @@ pruefe() { # beschreibung erwartet ist
   if [ "$2" = "$3" ]; then ok "$1"; else falsch "$1 (erwartet: $2, ist: ${3:-leer})"; fi
 }
 
+# Wartet, bis an der Instanz kein Speicherpunkt mehr aussteht. Die Vorlage hat nach dem
+# Start-Event und nach "Antrag prüfen" je einen (camunda:asyncAfter wie der easyForm-Baustein):
+# Die Engine antwortet dort schon, den Rest führt ihr Job Executor kurz danach aus.
+# Gezählt werden nur Jobs von Speicherpunkten (messages), nicht der Timer an "Antrag prüfen".
+speicherpunkte_abwarten() { # prozessinstanz
+  local i
+  for i in $(seq 1 30); do
+    rest worker GET "/job/count?processInstanceId=$1&messages=true&executable=true"
+    [ "$(wert count)" = "0" ] && return 0
+    sleep 1
+  done
+  falsch "Speicherpunkte der Instanz $1 nach 30 Sekunden noch offen"
+}
+
 # Startet als anna, prüft antragsteller und schließt "Antrag prüfen" als gerda ab.
 # Setzt PI (Prozessinstanz-ID). Aufruf: antrag PFADNAME ENTSCHEIDUNG
 antrag() {
@@ -66,6 +80,7 @@ antrag() {
 
   rest anna GET "/process-instance/$PI/variables/antragsteller"
   pruefe "antragsteller ist anna" anna "$(wert value)"
+  speicherpunkte_abwarten "$PI"
 
   rest gerda GET "/task?processInstanceId=$PI&candidateGroup=genehmiger"
   pruefe "\"Antrag prüfen\" liegt bei der Gruppe genehmiger" Task_Pruefen "$(wert taskDefinitionKey)"
@@ -76,6 +91,7 @@ antrag() {
 
   rest gerda POST "/task/$task/complete" "{\"variables\":{\"entscheidung\":{\"value\":\"$2\",\"type\":\"String\"}}}"
   pruefe "gerda schließt mit entscheidung=$2 ab" 204 "$STATUS"
+  speicherpunkte_abwarten "$PI"
 }
 
 echo "Smoke-Test gegen $ENGINE_URL (Lauf $LAUF)"

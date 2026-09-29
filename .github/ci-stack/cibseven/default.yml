@@ -1,11 +1,11 @@
-# CIB seven Run Konfiguration für das Übergangs-Setup der Schulung.
+# CIB seven Run Konfiguration für die Engine der GitHub Action (.github/ci-stack).
 #
 # Grundlage ist die default.yml aus dem Image cibseven/cibseven:run-2.2.0
 # (/camunda/configuration/default.yml). Das Start-Skript des Images liest genau
 # diese Datei (internal/run.sh: --spring.config.location=file:.../configuration/default.yml).
 # Alle Werte, die hier nicht mit "Schulung:" markiert sind, sind unverändert aus dem Image.
 #
-# Nur für die lokale Schulung. Nicht produktiv verwenden.
+# Nur für CI und lokale Tests. Nicht produktiv verwenden.
 
 # Find more available configuration properties on the following pages of the documentation.
 # https://docs.cibseven.org/manual/latest/user-guide/cibseven-run/#configure-cibseven-bpm-run
@@ -54,10 +54,8 @@ camunda.bpm:
       authentication: composite
 # https://docs.cibseven.org/manual/latest/user-guide/spring-boot-integration/configuration/#generic-properties
   generic-properties.properties:
-    # Schulung: Standard-Aufbewahrung der History für Modelle ohne historyTimeToLive.
-    # Ohne diesen Wert lehnt die Engine solche Deployments ab (ENGINE-12018),
-    # das betrifft die Vorlage in prozess/ und eure exportierten Modelle.
-    historyTimeToLive: P30D
+    # Schulung: bewusst kein Standard für historyTimeToLive, wie im Image. Wie CIB flow lehnt
+    # die Engine damit Modelle ohne historyTimeToLive ab (ENGINE-12018), die CI merkt es also.
     # update old namespace in script tasks, after migration from camunda to cibseven
     useCibSevenNamespaceInScripting: false
     # update old namespace in saved serialized objects, after migration from camunda to cibseven

@@ -1,0 +1,185 @@
+# Weboberfläche (flow-webclient) unter http://localhost:7083/client.
+#
+# Für die Schulung geändert gegenüber der CIB-Vorlage:
+#   - LDAP, SSO, Passwort-Wiederherstellung per Mail und Dataflow entfernt, die Schulung nutzt sie nicht
+#   - Metering und Fehlerbericht bleiben ohne Ziel, die Vorgaben im Image zeigen auf CIB-Server
+#   - Lizenzdatei nicht eingebunden
+# Adressen und JWT-Schlüssel kommen aus common-config.yaml.
+server:
+  servlet:
+    context-path: /client
+
+spring:
+  banner:
+    location: classpath:flow-webclient-banner.txt
+  config:
+    import:
+      - optional:classpath:common-config.yaml
+      - optional:classpath:version.yaml
+      - optional:classpath:cibflow-webclient.yaml
+  servlet:
+    register-default-servlet: true
+    multipart:
+      # Configures the maximum size for each individual file upload.
+      max-file-size: ${common.spring.servlet.multipart.max-file-size}
+      # Configures the maximum size allowed for the entire request, including all files and form data.
+      max-request-size: ${common.spring.servlet.multipart.max-request-size}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui
+    operationsSorter: alpha
+    tagsSorter: alpha
+    doc-expansion: none
+  # webclient server url for the swagger-ui. Only needs to be set if the automatic detection is wrong.
+  flowWebclient:
+    serverUrl: ""
+
+# see https://springdoc.org/properties.html
+api:
+  common:
+    title: "CIB Flow webclient API"
+    description: "This API exposes the functionality of CIB Flow webclient as a REST service."
+
+cibseven:
+  webclient:
+    # Engine rest
+    engineRest:
+      url: ${common.services.flow-cibseven.url}
+    historyLevel: full
+    # Token generation
+    authentication:
+      jwtSecret: ${common.jwt.secret}
+      tokenValidMinutes: ${common.jwt.tokenValidMinutes}
+      tokenProlongMinutes: ${common.jwt.tokenProlongMinutes}
+      recover:
+        jwtSecret: ${common.jwt.secret}
+        tokenValidMinutes: ${common.jwt.tokenValidMinutes}
+        tokenProlongMinutes: ${common.jwt.tokenProlongMinutes}
+
+    # BPM Provider
+    bpm:
+      provider: ${common.bpm.provider}
+
+    # User providers
+    user:
+      provider: ${common.user.provider}
+
+    # Set the wild card is gonna be used for the users search. By default is "*".
+    users:
+      search:
+        wildcard:
+
+    # If this params is set to false, the number of instances and incidents wont be taken.
+    fetchInstances: true
+    fetchIncidents: true
+
+    # External token user creation
+    token:
+      secret: ${common.jwt.secret}
+      deny:
+        external:
+          ip: true
+
+    # Camunda Cockpit URL
+    cockpit:
+      url: ${common.services.flow-cibseven.external-url}/camunda/app/cockpit/default/
+
+    services:
+      # Value here used to be flow-engine
+      basePath: flow-engine
+
+    # RestTemplate configuration
+    rest:
+      enabled: true
+      keepAlive: true
+      socketTimeout: 3600
+      connectTimeout: 30
+      connectionRequestTimeout: 180
+      connectionResponseTimeout:
+      maxConnPerRoute: 20
+      maxConnTotal: 40
+      connectionTimeToLive: 50000
+      connectionPoolingEnabled: true
+      connectionReuseEnabled: true
+      metricsEnabled: false
+      requestLoggingEnabled: false
+      followRedirects: true
+
+# CIB flow task URL
+flow:
+  processManagement:
+    enable: true
+    url: ${common.services.flow-process-management.external-url}
+  webclient:
+    task:
+      url: ${common.services.flow-webclient.external-url}/#/flow/auth/tasks/*/
+  resource:
+    enable: true
+    url: ${common.services.flow-resource.external-url}
+  ins7ght:
+    enable: false
+    url:
+  process-history:
+    enable: false
+  # CIB flow webclient properties used in client side.
+  # CIB flow ui-element-templates URL
+  ui:
+    element:
+      template:
+        url: ${common.services.ui-element-template.external-url}/#
+
+  # CIB flow modeler URL
+  modeler:
+    url: ${common.services.flow-modeler.external-url}
+
+  # CIB easyform URL
+  easyform:
+    url: ${common.services.easy-form.external-url}
+  # Schulung: kein Metering, keine Fehlerberichte an CIB
+  metering:
+    url:
+  errorReportUrl: http://localhost:7080/report/error
+  link:
+    terms:
+    privacy:
+    imprint:
+    accessibility:
+    help:
+  datasource:
+    fileValue:
+      enabled: false
+  authentication:
+    recover:
+      jwtSecret: ${common.jwt.secret}
+      tokenValidMinutes: ${common.jwt.tokenValidMinutes}
+      tokenProlongMinutes: ${common.jwt.tokenProlongMinutes}
+
+  custom:
+    spring:
+      jackson:
+        parser:
+          max-size: 25000000
+
+# Use common management/actuator configuration from common-config.yaml
+management:
+  endpoints:
+    enabled-by-default: false
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    info:
+      enabled: true
+    health:
+      enabled: true
+      probes:
+        enabled: true
+  info:
+    build:
+      enabled: true
+    git:
+      enabled: true
+      mode: full
+    java:
+      enabled: true

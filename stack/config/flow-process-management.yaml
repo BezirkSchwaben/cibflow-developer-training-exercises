@@ -1,0 +1,78 @@
+# Prozessmanagement (flow-process-management): Projekte, ZIP-Import und -Export, Bereitstellen.
+#
+# Für die Schulung geändert gegenüber der CIB-Vorlage:
+#   - SSO entfernt, läuft lokal nicht
+# Adressen und JWT-Schlüssel kommen aus common-config.yaml.
+server:
+  servlet:
+    context-path: /flow-process-management
+spring:
+  banner:
+    location: classpath:flow-process-management-banner.txt
+  config:
+    import:
+      - optional:classpath:common-config.yaml
+      - optional:classpath:flow-process-management-local.yaml
+      - optional:classpath:flow-process-management.yaml
+  mvc:
+    static-path-pattern: "/webapps/**"
+  web:
+    resources:
+      static-locations: "classpath:/webapps/"
+  datasource:
+    url: jdbc:h2:file:/opt/cib/data/flowmanagement;DB_CLOSE_DELAY=-1
+    username: ${common.database.h2.username}
+    password: ${common.database.h2.password}
+    driver-class-name: ${common.database.h2.driver-class-name}
+  jpa:
+    database-platform: ${common.database.h2.hibernate.dialect}
+    show-sql: true
+    hibernate:
+      ddl-auto: ${common.database.h2.hibernate.ddl-auto}
+      database-platform: ${common.database.h2.hibernate.dialect}
+      id:
+        new_generator_mappings: true
+    properties:
+      hibernate:
+        dialect: ${common.database.h2.hibernate.dialect}
+    open-in-view: false
+  flyway:
+    # Flyway is the single source of truth for schema management and migrations
+    enabled: ${common.database.flyway.enabled}
+
+springdoc:
+  # flow-process-management server url for the swagger-ui. Only needs to be set if the automatic detection is wrong.
+  flow-process-management:
+    serverUrl: ""
+
+api:
+  common:
+    title: "CIB Flow Process Management API"
+    description: "This API exposes the functionality of CIB Flow Process Management as a REST service."
+
+fpm:
+  modeler:
+    path: ""
+    url: ${common.services.flow-modeler.external-url}
+    serviceUrl: ${common.services.flow-modeler.url}
+  easyForm:
+    path: ""
+    url: ${common.services.easy-form.external-url}
+    serviceUrl: ${common.services.easy-form.url}
+  resources:
+    path: ""
+    url: ${common.services.flow-resource.external-url}
+    serviceUrl: ${common.services.flow-resource.url}
+  system:
+    current: ${common.services.flow-process-management.external-url}
+  css:
+    url: ${common.services.flow-webclient.external-url}/css
+
+cibseven:
+  webclient:
+    user:
+      provider: ${common.user.genericProvider}
+    authentication:
+      jwtSecret: ${common.jwt.secret}
+      tokenValidMinutes: ${common.jwt.tokenValidMinutes}
+      tokenProlongMinutes: ${common.jwt.tokenProlongMinutes}

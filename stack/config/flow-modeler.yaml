@@ -1,0 +1,79 @@
+# Modeler (flow-modeler) unter "Prozess modellieren".
+#
+# Für die Schulung geändert gegenüber der CIB-Vorlage:
+#   - SSO entfernt, läuft lokal nicht
+#   - Lizenzdatei nicht eingebunden
+#   - css.url zeigt auf den Webclient statt auf einen Helm-Platzhalter
+# Adressen und JWT-Schlüssel kommen aus common-config.yaml.
+server:
+  servlet:
+    context-path: /flow-modeler
+
+spring:
+  banner:
+    location: classpath:flow-modeler-banner.txt
+  config:
+    import:
+      - optional:classpath:common-config.yaml
+      - optional:classpath:flow-modeler-local.yaml
+      - optional:classpath:flow-modeler.yaml
+  datasource:
+    url: jdbc:h2:file:/opt/cib/data/flowmodeler;DB_CLOSE_DELAY=-1
+    username: ${common.database.h2.username}
+    password: ${common.database.h2.password}
+    driver-class-name: ${common.database.h2.driver-class-name}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: ${common.database.h2.hibernate.ddl-auto}
+      database-platform: ${common.database.h2.hibernate.dialect}
+  flyway:
+    # Flyway is the single source of truth for schema management and migrations
+    enabled: ${common.database.flyway.enabled}
+
+springdoc:
+  # flowmodeler server url for the swagger-ui. Only needs to be set if the automatic detection is wrong.
+  flowmodeler:
+    serverUrl: ""
+
+api:
+  common:
+    title: "CIB Flow Modeler API"
+    description: "This API exposes the functionality of CIB Flow Modeler as a REST service."
+
+cibseven:
+  webclient:
+    engineRest:
+      url: ${common.services.flow-cibseven.url}
+    # This is use in the UserProvider to regenerate the token so it is a service Url.
+    url: ${common.services.flow-webclient.url}
+    user:
+      provider: ${common.user.genericProvider}
+    bpm:
+      provider: ${common.bpm.provider}
+    authentication:
+      jwtSecret: ${common.jwt.secret}
+      tokenValidMinutes: ${common.jwt.tokenValidMinutes}
+      tokenProlongMinutes: ${common.jwt.tokenProlongMinutes}
+
+flowmodeler:
+  historicMaxResults: 30
+  session:
+    expiresAfterMin: 10 # time in minutes
+  deleteProcesses:
+    versionLimit: 50
+    cron: "0 0 0 * * ?"
+  deleteUsages:
+    usageLimit: 50
+    cron: "0 0 0 * * ?"
+  easyForm:
+    url: ${common.services.easy-form.url}
+  resource:
+    url: ${common.services.flow-resource.url}
+  css:
+    # Schulung: Vorlage hat hier https://{{ .Values.global.host }}/client/css
+    url: ${common.services.flow-webclient.external-url}/css
+  templates:
+    paths:
+      - public/templates/element-templates.json
+      - file:/usr/local/tomcat/webapps/flow-modeler/templates/element-templates.json
