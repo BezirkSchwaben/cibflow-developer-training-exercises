@@ -1,6 +1,8 @@
 // Einstiegspunkt des Workers.
-//   dotnet run              Worker-Schleife starten, beenden mit Strg+C
-//   dotnet run -- deploy    prozess/genehmigungsworkflow.bpmn in die Engine einspielen
+//   dotnet run                    Worker-Schleife starten, beenden mit Strg+C
+//   dotnet run -- deploy          prozess/genehmigungsworkflow.bpmn in die Engine einspielen
+//   dotnet run -- deploy <pfad>   eine andere BPMN-Datei einspielen, etwa
+//                                 prozess/varianten/verbuchen-fehlerpfad.bpmn
 // Im Repo-Root jeweils mit --project src/GenehmigungWorker, etwa:
 //   dotnet run --project src/GenehmigungWorker -- deploy
 using GenehmigungWorker;
@@ -24,7 +26,8 @@ using var http = einstellungen.ErzeugeHttpClient();
 
 if (args is ["deploy", ..])
 {
-    await Deploy.AusfuehrenAsync(http, einstellungen.ProzessKey);
+    // Ohne weiteres Argument das Modell unter prozess/, sonst die Datei aus args[1]
+    await Deploy.AusfuehrenAsync(http, einstellungen.ProzessKey, args.Length > 1 ? args[1] : null);
     return 0;
 }
 

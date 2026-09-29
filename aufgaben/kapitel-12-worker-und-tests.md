@@ -174,18 +174,55 @@ Im Formular-Lauf ausprobieren:
 
 Der Schlüssel ist im Formular-Lauf die Prozessinstanz-ID, weil das Startformular keinen Business Key setzt.
 
+## Bonus: Fachlicher Fehler
+
+Der zweite Bonus, für alle, die noch Zeit haben. Nicht jeder Fehler ist technisch. Lehnt das Fachsystem eine Buchung ab, etwa weil das Budget der Kostenstelle nicht reicht, ändert ein zweiter Versuch nichts daran. Mit `failure` würde der Worker alle fünf Minuten dasselbe Nein abholen, bis die Engine einen Incident anlegt. Stattdessen meldet er einen BPMN-Fehler, und das Modell führt die Instanz auf einen eigenen Pfad.
+
+Diesen Pfad hat nur die Variante `prozess/varianten/verbuchen-fehlerpfad.bpmn` aus Kapitel 04 und 11: der Ausschnitt ab „Genehmigung erteilt“. Am Service Task „Genehmigung verbuchen“ hängt das Error-Boundary „Buchung abgelehnt“ für den errorCode `BUCHUNG_ABGELEHNT`. Es legt Code und Grund in den Variablen `errorCode` und `errorMessage` ab und führt zu „Buchung klären“ für die Gruppe `genehmiger`. Die Variante hat eine eigene Process ID, `Process_VerbuchenFehlerpfad`, aber dasselbe Topic `genehmigung-verbuchen`. Euer Worker bedient deshalb beide Modelle, ohne dass ihr `appsettings.json` ändert.
+
+1. **Simulation ablehnen lassen.** Legt unter `Fachsystem/` eine eigene Exception an, etwa `BuchungAbgelehntException`, mit dem Grund als Message. `BuchungssystemSimulation.Verbuchen` wirft sie direkt nach der Idempotenzprüfung, wenn der Betrag über einem festen Budget liegt, etwa 50.000 Euro je Buchung. Die Meldung nennt den Grund: `Budget der Kostenstelle reicht nicht: 60.000,00 Euro beantragt, 50.000,00 Euro frei`. Eine abgelehnte Buchung speichert die Simulation nicht. Am Handler ändert ihr nichts, die Exception fliegt durch ihn hindurch bis in die Schleife.
+2. **Vierte Methode im `ExternalTaskClient`.** `BpmnErrorAsync(ExternalTask task, string errorCode, string meldung)` schickt `POST /engine-rest/external-task/{id}/bpmnError` mit `workerId`, `errorCode` und `errorMessage`. Vorbild ist `FailureAsync`.
+3. **Catch in der Schleife.** In `Program.cs` direkt vor `catch (Exception ex)` ein `catch (BuchungAbgelehntException abgelehnt)` einsetzen. Es ruft `BpmnErrorAsync(task, "BUCHUNG_ABGELEHNT", abgelehnt.Message)` und schreibt eine Log-Zeile. Die Reihenfolge zählt: C# nimmt den ersten passenden `catch`, und `catch (Exception)` passt auf alles.
+4. **Variante deployen.** Mit einem Pfad dahinter spielt `deploy` diese Datei ein statt `prozess/genehmigungsworkflow.bpmn`. Das Deployment heißt dann wie die Datei, die Vorlage bleibt, wie sie ist.
+   ```bash
+   dotnet run --project src/GenehmigungWorker -- deploy prozess/varianten/verbuchen-fehlerpfad.bpmn
+   ```
+   Beim ersten Mal meldet `deploy` `Neue Version: Process_VerbuchenFehlerpfad, Version 1`, danach „Modell unverändert“.
+5. **Worker starten.** Läuft noch der alte, stoppt ihn mit Strg+C, dann: `dotnet run --project src/GenehmigungWorker`
+6. **Variante per REST starten.** Die Variante hat weder Startformular noch Initiator, deshalb gebt ihr `antragsteller`, `betrag` und `begruendung` selbst mit. Fehlt eine davon, scheitert der Handler mit `KeyNotFoundException`, und der Worker meldet `failure`. Am bequemsten geht das mit der http-Datei `http/genehmigungsworkflow.http`: B2 startet die Variante, B3 bis B5 prüfen das Ergebnis, B1 deployt sie wie Schritt 4. Oder im Terminal:
+   ```bash
+   # bash, zsh, Git Bash
+   curl -u anna:anna -H "Content-Type: application/json" \
+     -d '{"variables":{"antragsteller":{"value":"anna","type":"String"},"betrag":{"value":60000,"type":"Long"},"begruendung":{"value":"Neue Serverhardware","type":"String"}}}' \
+     http://localhost:8080/engine-rest/process-definition/key/Process_VerbuchenFehlerpfad/start
+   ```
+   ```powershell
+   # PowerShell
+   $anmeldung = "Basic " + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("anna:anna"))
+   $antrag = '{"variables":{"antragsteller":{"value":"anna","type":"String"},"betrag":{"value":60000,"type":"Long"},"begruendung":{"value":"Neue Serverhardware","type":"String"}}}'
+   Invoke-RestMethod -Method Post -Headers @{ Authorization = $anmeldung } -ContentType "application/json" -Body $antrag -Uri http://localhost:8080/engine-rest/process-definition/key/Process_VerbuchenFehlerpfad/start
+   ```
+7. **Prüfen.** Nach wenigen Sekunden zeigt das Worker-Log den geholten Task und eure Ablehnung, in der Musterlösung `Task ... fachlich abgelehnt: Budget der Kostenstelle reicht nicht: 60.000,00 Euro beantragt, 50.000,00 Euro frei. bpmnError BUCHUNG_ABGELEHNT gemeldet.` Meldet euch in der Webapp als `gerda` an: In der Tasklist wartet im Filter „Aufgaben meiner Gruppen“ die Aufgabe „Buchung klären“ aus „Genehmigung verbuchen mit Fehlerpfad“. Sie hat kein Formular, die Tasklist zeigt sie als „Leere Aufgabe“. Den Grund seht ihr im Cockpit: Öffnet die Prozessliste unter http://localhost:8080/webapp/#/seven/auth/processes/list, wählt „Genehmigung verbuchen mit Fehlerpfad“ und öffnet die Instanz über das Augen-Symbol. Im Reiter „Variablen“ stehen `errorCode` mit `BUCHUNG_ABGELEHNT` und `errorMessage` mit dem Grund. In der http-Datei zeigen B3 die Aufgabe und B4 die Variablen.
+8. **Gegenprobe.** Startet die Variante noch einmal, diesmal mit `betrag` 1200 statt 60000, in B2 der http-Datei oder im Befehl aus Schritt 6. Jetzt verbucht der Worker, und die Instanz endet bei „Antrag genehmigt“. B5 meldet `COMPLETED`, B4 zeigt `buchungsnummer` und `genehmigungMitgeteilt`.
+
+Warum die Variante? Mit 60.000 Euro aus dem Startformular kommt auch die Vorlage bis zu „Genehmigung verbuchen“, aber dort fängt kein Error-Boundary `BUCHUNG_ABGELEHNT`. Dann beendet die Engine die Instanz still am Service Task: Im Cockpit steht sie als abgeschlossen, ohne „Antrag genehmigt“ und ohne `buchungsnummer`. Es gibt keinen Vorfall, und den Grund findet ihr nur im Log der Engine: `docker compose logs cibseven` im Ordner `stack/` zeigt `ENGINE-02001 ... but no catching boundary event was defined. Execution is ended`. Ein `bpmnError` braucht also ein Boundary im Modell, das seinen Code fängt.
+
 ## Musterlösung
 
-`loesung/` enthält die fertigen Fassungen aller Dateien, die sich gegenüber dem Startstand ändern, unter denselben Pfaden:
+`loesung/` enthält die fertigen Fassungen aller Dateien, die sich gegenüber dem Startstand ändern oder neu dazukommen, unter denselben Pfaden:
 
 | Datei | Was die Musterlösung macht |
 |---|---|
 | `loesung/src/GenehmigungWorker/Handlers/GenehmigungVerbuchenHandler.cs` | wie auf der Folie |
-| `loesung/src/GenehmigungWorker/Program.cs` | Schleife von der Folie, dazu je eine Log-Zeile für geholt, erledigt und fehlgeschlagen |
-| `loesung/src/GenehmigungWorker/Fachsystem/BuchungssystemSimulation.cs` | fortlaufende Nummern je Jahr, idempotent über `buchungen.json` neben der DLL |
+| `loesung/src/GenehmigungWorker/Program.cs` | Schleife von der Folie, dazu je eine Log-Zeile für geholt, erledigt und fehlgeschlagen, für den Bonus fachlicher Fehler `catch (BuchungAbgelehntException)` mit `bpmnError` |
+| `loesung/src/GenehmigungWorker/ExternalTaskClient.cs` | wie im Startstand, dazu `BpmnErrorAsync` |
+| `loesung/src/GenehmigungWorker/Fachsystem/BuchungssystemSimulation.cs` | fortlaufende Nummern je Jahr, idempotent über `buchungen.json` neben der DLL, lehnt über 50.000 Euro je Buchung ab |
+| `loesung/src/GenehmigungWorker/Fachsystem/BuchungAbgelehntException.cs` | neu: die fachliche Ablehnung mit Grund |
 | `loesung/tests/GenehmigungWorker.Tests/BuchungssystemFake.cs` | liefert `B-2026-0001` und merkt sich jeden Aufruf |
-| `loesung/tests/GenehmigungWorker.Tests/GenehmigungVerbuchenHandlerTests.cs` | Test der Folie, ohne Business Key, fehlende Variable, Idempotenz der Simulation |
+| `loesung/tests/GenehmigungWorker.Tests/GenehmigungVerbuchenHandlerTests.cs` | Test der Folie, ohne Business Key, fehlende Variable, Idempotenz der Simulation, Ablehnung über dem Budget in Simulation und Handler |
+| `loesung/tests/GenehmigungWorker.Tests/ExternalTaskClientTests.cs` | neu: `BpmnErrorAsync` schickt Pfad und Body, ohne Engine |
 | `loesung/tests/GenehmigungWorker.Tests/GenehmigungsworkflowTests.cs` | Prozesstest der Folie und Gegenprobe mit `abgelehnt` |
+| `loesung/tests/GenehmigungWorker.Tests/FehlerpfadTests.cs` | neu: Prozesstest gegen die Variante, deployt sie selbst und prüft „Buchung klären“ mit `errorCode` und `errorMessage` |
 
 **Vergleichen:** In VS Code beide Dateien im Explorer markieren, Rechtsklick, „Ausgewählte vergleichen“. Oder im Terminal, bash und PowerShell gleich:
 
@@ -193,7 +230,7 @@ Der Schlüssel ist im Formular-Lauf die Prozessinstanz-ID, weil das Startformula
 git diff --no-index src/GenehmigungWorker/Program.cs loesung/src/GenehmigungWorker/Program.cs
 ```
 
-**Übernehmen:** Im Repo-Root kopiert ihr die Musterlösung über den Startstand. Das überschreibt eure Fassungen dieser sechs Dateien, sichert oder committet sie vorher.
+**Übernehmen:** Im Repo-Root kopiert ihr die Musterlösung über den Startstand. Das überschreibt eure Fassungen dieser Dateien, sichert oder committet sie vorher.
 
 ```bash
 # bash, zsh, Git Bash
@@ -207,9 +244,10 @@ Copy-Item -Path loesung\src, loesung\tests -Destination . -Recurse -Force
 
 Einzelne Dateien übernehmt ihr genauso, etwa `cp loesung/src/GenehmigungWorker/Program.cs src/GenehmigungWorker/` (PowerShell: `Copy-Item loesung\src\GenehmigungWorker\Program.cs src\GenehmigungWorker\`). Achtet dabei auf Paare, die zusammengehören:
 
-- `Program.cs` ruft den Konstruktor der Simulation mit Dateipfad auf. Übernehmt `BuchungssystemSimulation.cs` mit.
-- `GenehmigungVerbuchenHandlerTests.cs` braucht den Fake der Musterlösung (`Aufrufe`) und ihre Simulation.
+- `Program.cs` ruft den Konstruktor der Simulation mit Dateipfad auf, fängt `BuchungAbgelehntException` und ruft `BpmnErrorAsync`. Übernehmt `BuchungssystemSimulation.cs`, `Fachsystem/BuchungAbgelehntException.cs` und `ExternalTaskClient.cs` mit.
+- `GenehmigungVerbuchenHandlerTests.cs` braucht den Fake der Musterlösung (`Aufrufe`), ihre Simulation und die Exception.
+- `ExternalTaskClientTests.cs` braucht den `ExternalTaskClient` der Musterlösung, `FehlerpfadTests.cs` dazu Simulation und Exception.
 
-Mit der Musterlösung laufen `dotnet test --filter "Kategorie!=Prozesstest"` ohne Engine (4 Tests) und `dotnet test` mit laufendem Stack und deploytem Modell (6 Tests) grün. Genau das prüft auch die GitHub Action des Repos bei jedem Push.
+Mit der Musterlösung laufen `dotnet test --filter "Kategorie!=Prozesstest"` ohne Engine (7 Tests) und `dotnet test` mit laufendem Stack und deploytem Modell (10 Tests) grün. Die Variante für den Prozesstest zum fachlichen Fehler deployt der Test selbst. Genau das prüft auch die GitHub Action des Repos bei jedem Push.
 
 Zurück zum Startstand kommt ihr mit `git restore src tests`. Das verwirft alle eure Änderungen in diesen Ordnern.

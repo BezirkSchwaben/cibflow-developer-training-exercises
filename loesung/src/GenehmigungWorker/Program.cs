@@ -1,6 +1,8 @@
 // Einstiegspunkt des Workers.
-//   dotnet run              Worker-Schleife starten, beenden mit Strg+C
-//   dotnet run -- deploy    prozess/genehmigungsworkflow.bpmn in die Engine einspielen
+//   dotnet run                    Worker-Schleife starten, beenden mit Strg+C
+//   dotnet run -- deploy          prozess/genehmigungsworkflow.bpmn in die Engine einspielen
+//   dotnet run -- deploy <pfad>   eine andere BPMN-Datei einspielen, etwa
+//                                 prozess/varianten/verbuchen-fehlerpfad.bpmn
 // Im Repo-Root jeweils mit --project src/GenehmigungWorker, etwa:
 //   dotnet run --project src/GenehmigungWorker -- deploy
 using GenehmigungWorker;
@@ -26,7 +28,8 @@ using var http = einstellungen.ErzeugeHttpClient();
 
 if (args is ["deploy", ..])
 {
-    await Deploy.AusfuehrenAsync(http, einstellungen.ProzessKey);
+    // Ohne weiteres Argument das Modell unter prozess/, sonst die Datei aus args[1]
+    await Deploy.AusfuehrenAsync(http, einstellungen.ProzessKey, args.Length > 1 ? args[1] : null);
     return 0;
 }
 
@@ -65,6 +68,18 @@ try
                 var ergebnis = handler.Handle(task);
                 await client.CompleteAsync(task, ergebnis);
                 Log($"Task {task.Id} erledigt: {string.Join(", ", ergebnis.Select(e => $"{e.Key} = {e.Value}"))}");
+            }
+            catch (BuchungAbgelehntException abgelehnt)
+            {
+                // Fachlicher Fehler, kein Bug: Ein Retry hilft nicht, deshalb bpmnError statt failure.
+                // Dieser catch steht vor catch (Exception), sonst fängt der allgemeine auch die Ablehnung.
+                // In der Variante prozess/varianten/verbuchen-fehlerpfad.bpmn fängt das Error-Boundary
+                // BUCHUNG_ABGELEHNT und führt zu "Buchung klären".
+                // Ohne passendes Error-Boundary, etwa in der Vorlage, beendet die Engine die Instanz still
+                // am Service Task: abgeschlossen, aber ohne "Antrag genehmigt", ohne Incident, und der Grund
+                // steht nur im Log der Engine. bpmnError also nur, wenn das Modell den Code auch fängt.
+                await client.BpmnErrorAsync(task, "BUCHUNG_ABGELEHNT", abgelehnt.Message);
+                Log($"Task {task.Id} fachlich abgelehnt: {abgelehnt.Message}. bpmnError BUCHUNG_ABGELEHNT gemeldet.");
             }
             catch (Exception ex)
             {

@@ -16,7 +16,9 @@ cibflow-developer-training-exercises/
 │   ├── init/benutzer-anlegen.sh    # legt Benutzer, Gruppe genehmiger und Tasklist-Filter an
 │   └── smoke-test.sh               # Trainer-Werkzeug: prüft alle drei Pfade automatisch
 ├── prozess/
-│   └── genehmigungsworkflow.bpmn   # Übergangsfassung des Modells mit Generated Forms
+│   ├── genehmigungsworkflow.bpmn   # Übergangsfassung des Modells mit Generated Forms
+│   └── varianten/
+│       └── verbuchen-fehlerpfad.bpmn  # Variante mit Error-Boundary für den Bonus fachlicher Fehler
 ├── http/
 │   └── genehmigungsworkflow.http   # alle REST-Schritte zum Durchklicken in VS Code
 ├── aufgaben/
@@ -118,6 +120,7 @@ Alle Befehle im Ordner `stack/`.
 | 6 | External Task holen (`fetchAndLock`, Topic `genehmigung-verbuchen`) | `worker` |
 | 7 | External Task mit `buchungsnummer` abschließen | `worker` |
 | 8 und 9 | History prüfen: Instanz `COMPLETED`, `buchungsnummer` gesetzt | `worker` |
+| B1 bis B5 | Bonus fachlicher Fehler in Kapitel 12: Variante deployen, mit Variablen starten, „Buchung klären“, Variablen und History prüfen | `worker`, `anna`, `gerda` |
 
 Spätere Requests lesen IDs aus den Antworten früherer Requests (`# @name`). Schickt ihr einen Request ab, bevor sein Vorgänger gelaufen ist, fehlt ihm diese ID, und er schlägt fehl.
 
@@ -137,7 +140,7 @@ Ab Kapitel 11 schreibt ihr den External Task Worker für das Topic `genehmigung-
 src/GenehmigungWorker/
 ├── Program.cs                           # Worker-Schleife, mit "deploy" das Deployment
 ├── ExternalTaskClient.cs                # fetchAndLock, complete, failure und der Record ExternalTask
-├── Deploy.cs                            # spielt prozess/genehmigungsworkflow.bpmn ein
+├── Deploy.cs                            # spielt prozess/genehmigungsworkflow.bpmn ein, mit Pfad eine andere Datei
 ├── Einstellungen.cs                     # liest appsettings.json, User Secrets und Umgebung
 ├── Handlers/
 │   └── GenehmigungVerbuchenHandler.cs   # lesen, verbuchen, Ergebnis zurückgeben
@@ -198,9 +201,15 @@ dotnet run --project src/GenehmigungWorker -- deploy      # BPMN aus prozess/ ei
 dotnet run --project src/GenehmigungWorker                # Worker starten, beenden mit Strg+C
 ```
 
+Mit einem Pfad dahinter spielt `deploy` eine andere Datei ein, etwa die Variante für den Bonus fachlicher Fehler:
+
+```bash
+dotnet run --project src/GenehmigungWorker -- deploy prozess/varianten/verbuchen-fehlerpfad.bpmn
+```
+
 Im Ordner `src/GenehmigungWorker` genügen `dotnet run -- deploy` und `dotnet run`.
 
-`deploy` sucht `prozess/genehmigungsworkflow.bpmn` vom aktuellen Ordner aus nach oben und danach vom Programmordner aus. Deshalb klappt der Aufruf im Repo-Root, im Projektordner und aus der IDE, auch wenn sie im Ordner `bin/...` startet. Ist das Modell unverändert, legt die Engine dank `enable-duplicate-filtering` keine neue Version an, und `deploy` meldet „Modell unverändert“. Weicht die Process ID des Modells von `ProzessKey` ab, weist `deploy` darauf hin.
+`deploy` sucht `prozess/genehmigungsworkflow.bpmn` vom aktuellen Ordner aus nach oben und danach vom Programmordner aus. Deshalb klappt der Aufruf im Repo-Root, im Projektordner und aus der IDE, auch wenn sie im Ordner `bin/...` startet. Ist das Modell unverändert, legt die Engine dank `enable-duplicate-filtering` keine neue Version an, und `deploy` meldet „Modell unverändert“. Weicht die Process ID des Modells von `ProzessKey` ab, weist `deploy` darauf hin. Mit Pfad sucht `deploy` die angegebene Datei genauso, das Deployment heißt dann wie die Datei (`verbuchen-fehlerpfad`), und der Hinweis zur Process ID entfällt, denn eine Variante hat ihre eigene.
 
 Der Worker holt bis zu fünf Tasks je Anfrage, hält die Anfrage per Long Polling bis zu zehn Sekunden offen und sperrt jeden Task für 30 Sekunden. Im Startstand loggt er Business Key, Prozessinstanz und Variablen:
 
@@ -235,7 +244,7 @@ Die Unit-Tests brauchen weder Engine noch Zugangsdaten und laufen in Millisekund
 | Stand | `dotnet test --filter "Kategorie!=Prozesstest"` | `dotnet test` mit laufendem Stack |
 |---|---|---|
 | Startstand | 1 übersprungen | 3 übersprungen |
-| Musterlösung | 4 bestanden | 6 bestanden |
+| Musterlösung | 7 bestanden | 10 bestanden |
 
 Den Test-Helfer `EngineHelfer.cs` (im Test `_engine`) bekommt ihr fertig: je Methode ein REST-Endpunkt, etwa `StartAsync`, `GetTaskAsync`, `CompleteTaskAsync`, `FetchAndLockAsync`, `CompleteAsync`, `GetHistoryAsync`, `GetVariableAsync` und für die Gegenprobe `GetExternalTasksAsync`. Die lesenden Methoden warten auf den Zustand, statt nur einmal zu fragen: `GetTaskAsync` fragt bis zu zehn Sekunden lang nach, bis die Aufgabe da ist. `GetHistoryAsync`, `GetVariableAsync` und `GetExternalTasksAsync` warten vorher, bis an der Instanz kein Speicherpunkt mehr aussteht. Das braucht ihr, sobald euer Modell einen Speicherpunkt hat, etwa „Asynchronous continuations: After“ am Start-Event: Dann antwortet die Engine schon dort, und den Rest führt der Job Executor der Engine kurz danach im Hintergrund aus. Kommt der Zustand nicht, nennt die Fehlermeldung, was erwartet war und wo die Instanz steht.
 
@@ -251,22 +260,26 @@ Die Schritte stehen als `TODO Kapitel 12, Schritt ...` im Code, ausführlich mit
 | 4 | `GenehmigungsworkflowTests.cs` | Prozesstest schreiben, `Skip` entfernen, Worker stoppen, `dotnet test` |
 | 5 | Webapp | Worker starten, als `anna` einen Antrag stellen, als `gerda` genehmigen, im Cockpit prüfen |
 
-Wer schneller ist: die Gegenprobe im Prozesstest (mit `abgelehnt` entsteht kein External Task) und der [Bonus Idempotenz](aufgaben/kapitel-12-worker-und-tests.md#bonus-idempotenz).
+Wer schneller ist: die Gegenprobe im Prozesstest (mit `abgelehnt` entsteht kein External Task), der [Bonus Idempotenz](aufgaben/kapitel-12-worker-und-tests.md#bonus-idempotenz) und der [Bonus fachlicher Fehler](aufgaben/kapitel-12-worker-und-tests.md#bonus-fachlicher-fehler): Die Simulation lehnt Buchungen über 50.000 Euro ab, der Worker meldet `bpmnError` mit `BUCHUNG_ABGELEHNT`, und in der Variante `prozess/varianten/verbuchen-fehlerpfad.bpmn` wartet danach „Buchung klären“.
 
 ### Musterlösung
 
-`loesung/` enthält die fertigen Fassungen der Dateien, die sich gegenüber dem Startstand ändern, unter denselben Pfaden. Wie ihr vergleicht und übernehmt, steht auch im [Aufgabenblatt](aufgaben/kapitel-12-worker-und-tests.md#musterlösung).
+`loesung/` enthält die fertigen Fassungen der Dateien, die sich gegenüber dem Startstand ändern oder neu dazukommen, unter denselben Pfaden. Wie ihr vergleicht und übernehmt, steht auch im [Aufgabenblatt](aufgaben/kapitel-12-worker-und-tests.md#musterlösung).
 
 ```
 loesung/
 ├── src/GenehmigungWorker/
-│   ├── Program.cs                               # Schleife mit Handler, complete und failure
+│   ├── Program.cs                               # Schleife mit Handler, complete, failure und bpmnError
+│   ├── ExternalTaskClient.cs                    # wie im Startstand, dazu BpmnErrorAsync
 │   ├── Handlers/GenehmigungVerbuchenHandler.cs  # wie auf der Folie
-│   └── Fachsystem/BuchungssystemSimulation.cs   # fortlaufende Nummern, idempotent per Datei
+│   ├── Fachsystem/BuchungssystemSimulation.cs   # fortlaufende Nummern, idempotent per Datei, Budget 50.000 Euro
+│   └── Fachsystem/BuchungAbgelehntException.cs  # fachliche Ablehnung mit Grund
 └── tests/GenehmigungWorker.Tests/
     ├── BuchungssystemFake.cs                    # liefert B-2026-0001 und merkt sich die Aufrufe
-    ├── GenehmigungVerbuchenHandlerTests.cs      # Test der Folie, ohne Business Key, fehlende Variable, Idempotenz
-    └── GenehmigungsworkflowTests.cs             # Prozesstest der Folie und Gegenprobe mit abgelehnt
+    ├── GenehmigungVerbuchenHandlerTests.cs      # Test der Folie, ohne Business Key, fehlende Variable, Idempotenz, Ablehnung
+    ├── ExternalTaskClientTests.cs               # BpmnErrorAsync schickt Pfad und Body, ohne Engine
+    ├── GenehmigungsworkflowTests.cs             # Prozesstest der Folie und Gegenprobe mit abgelehnt
+    └── FehlerpfadTests.cs                       # Prozesstest gegen die Variante: bpmnError führt zu „Buchung klären“
 ```
 
 `IBuchungssystem.cs`, `EngineHelfer.cs` und alle übrigen Dateien sind schon im Startstand fertig. Die Solution baut nur `src/` und `tests/`, der Ordner `loesung/` stört den Build nicht.
@@ -277,7 +290,7 @@ Zum Vergleichen markiert ihr in VS Code beide Dateien im Explorer und wählt per
 git diff --no-index src/GenehmigungWorker/Program.cs loesung/src/GenehmigungWorker/Program.cs
 ```
 
-Zum Übernehmen kopiert ihr die Musterlösung im Repo-Root über den Startstand. Das überschreibt eure Fassungen dieser sechs Dateien, sichert oder committet sie vorher:
+Zum Übernehmen kopiert ihr die Musterlösung im Repo-Root über den Startstand. Das überschreibt eure Fassungen dieser Dateien, sichert oder committet sie vorher:
 
 ```bash
 # bash, zsh, Git Bash
@@ -289,7 +302,7 @@ cp -R loesung/src loesung/tests .
 Copy-Item -Path loesung\src, loesung\tests -Destination . -Recurse -Force
 ```
 
-Eine einzelne Datei übernehmt ihr genauso, etwa `cp loesung/src/GenehmigungWorker/Program.cs src/GenehmigungWorker/` (PowerShell: `Copy-Item loesung\src\GenehmigungWorker\Program.cs src\GenehmigungWorker\`). `Program.cs` braucht dann auch die `BuchungssystemSimulation.cs` der Musterlösung (Konstruktor mit Dateipfad), `GenehmigungVerbuchenHandlerTests.cs` braucht deren Simulation und Fake. Mit der Musterlösung laufen `dotnet test --filter "Kategorie!=Prozesstest"` ohne Engine und `dotnet test` mit laufendem Stack und deploytem Modell grün. Zurück zum Startstand kommt ihr mit `git restore src tests`, das verwirft eure Änderungen in diesen Ordnern.
+Eine einzelne Datei übernehmt ihr genauso, etwa `cp loesung/src/GenehmigungWorker/Program.cs src/GenehmigungWorker/` (PowerShell: `Copy-Item loesung\src\GenehmigungWorker\Program.cs src\GenehmigungWorker\`). `Program.cs` braucht dann auch `BuchungssystemSimulation.cs` (Konstruktor mit Dateipfad), `Fachsystem/BuchungAbgelehntException.cs` und `ExternalTaskClient.cs` (`BpmnErrorAsync`) der Musterlösung, `GenehmigungVerbuchenHandlerTests.cs` braucht deren Simulation, Exception und Fake. Mit der Musterlösung laufen `dotnet test --filter "Kategorie!=Prozesstest"` ohne Engine und `dotnet test` mit laufendem Stack und deploytem Modell grün. Zurück zum Startstand kommt ihr mit `git restore src tests`, das verwirft eure Änderungen in diesen Ordnern.
 
 Der Worker der Musterlösung loggt jeden Task:
 
@@ -299,9 +312,11 @@ Der Worker der Musterlösung loggt jeden Task:
 10:14:52 Task aea3b3dd-... geholt: Business Key (keiner), Prozessinstanz ae9c60c4-..., Retries (noch keine)
 10:14:52 Verbucht: B-2026-0001 für anna, 1200,00 Euro, "Dienstreise zur Fachtagung" (Schlüssel ae9c60c4-...)
 10:14:52 Task aea3b3dd-... erledigt: buchungsnummer = B-2026-0001
+10:15:40 Task 56ec87ba-... geholt: Business Key (keiner), Prozessinstanz 56ec87af-..., Retries (noch keine)
+10:15:40 Task 56ec87ba-... fachlich abgelehnt: Budget der Kostenstelle reicht nicht: 60.000,00 Euro beantragt, 50.000,00 Euro frei. bpmnError BUCHUNG_ABGELEHNT gemeldet.
 ```
 
-Kommt derselbe Schlüssel noch einmal, meldet die Simulation `Schlüssel ... ist schon verbucht als B-2026-0001, keine zweite Buchung.`, und der Worker schließt den Task mit derselben Nummer ab. Scheitert der Handler, etwa an einer fehlenden Variablen, schickt der Worker `failure`: beim ersten Mal mit 3 verbleibenden Versuchen, danach herunterzählend, dazwischen fünf Minuten Pause. Bei 0 legt die Engine einen Incident an.
+Kommt derselbe Schlüssel noch einmal, meldet die Simulation `Schlüssel ... ist schon verbucht als B-2026-0001, keine zweite Buchung.`, und der Worker schließt den Task mit derselben Nummer ab. Scheitert der Handler, etwa an einer fehlenden Variablen, schickt der Worker `failure`: beim ersten Mal mit 3 verbleibenden Versuchen, danach herunterzählend, dazwischen fünf Minuten Pause. Bei 0 legt die Engine einen Incident an. Liegt der Betrag über 50.000 Euro, lehnt die Simulation ab, und der Worker meldet `bpmnError` mit `BUCHUNG_ABGELEHNT` und dem Grund als `errorMessage`. In der Variante `prozess/varianten/verbuchen-fehlerpfad.bpmn` wartet danach „Buchung klären“. In der Vorlage fängt kein Error-Boundary den Fehler, die Engine beendet die Instanz dann still am Service Task, ohne Incident.
 
 ### Entscheidungen, wo die Folien offen sind
 
@@ -317,6 +332,8 @@ Kommt derselbe Schlüssel noch einmal, meldet die Simulation `Schlüssel ... ist
 - Die Simulation speichert die Buchung, bevor sie die Nummer zurückgibt. Stirbt der Worker zwischen Verbuchen und `complete`, bekommt der nächste Versuch dieselbe Nummer.
 - Die Schleife in der Musterlösung ist die von der Folie, ergänzt um je eine Log-Zeile für geholt, erledigt und fehlgeschlagen.
 - Der Unit-Test-Fake merkt sich seine Aufrufe. Damit prüft ein Test, dass der Handler ohne Business Key unter der Prozessinstanz-ID verbucht, wie beim Start über das Formular.
+- `deploy` mit Pfad spielt eine andere Datei ein, etwa eine Variante unter `prozess/varianten/`. Deployment und Ressource heißen dann wie die Datei, nicht wie der `ProzessKey` der Vorlage.
+- Für den Bonus fachlicher Fehler lehnt die Simulation der Musterlösung jede Buchung über 50.000 Euro ab (`BudgetJeBuchung`) und speichert sie nicht. Die Ablehnung ist eine eigene Exception unter `Fachsystem/`, `BuchungAbgelehntException`. Der Handler bleibt wie auf der Folie, erst die Schleife macht aus der Exception ein `bpmnError`. Die Beträge in der Meldung stehen immer im deutschen Format, egal wie der Rechner eingestellt ist.
 - `EngineHelfer.FetchAndLockAsync` fragt bis zu 45 Sekunden lang nach, statt nach einem leeren fetchAndLock sofort aufzugeben. Grund: Die letzte Long-Polling-Anfrage eines eben gestoppten Workers bleibt in der Engine bis zu zehn Sekunden offen und kann den Task des Tests noch für 30 Sekunden sperren. Ohne Nachfragen scheitert der Prozesstest dann, obwohl alles stimmt.
 
 ## Stoppen und Zurücksetzen
@@ -360,7 +377,7 @@ Es legt eigene Instanzen mit Business Key `smoke-...` an und löscht am Ende, wa
 | Job | Was er prüft |
 |---|---|
 | Startstand bauen und testen | `dotnet build`, dann `dotnet test`: Der Startstand baut ohne Fehler, die TODO-Tests sind übersprungen, keiner ist rot. |
-| Musterlösung gegen die lokale Engine | übernimmt `loesung/` mit `cp -R loesung/src loesung/tests .`, baut, führt die Unit-Tests ohne Engine und ohne Zugangsdaten aus, startet `stack/` mit `docker compose up -d`, wartet, bis `init` mit Exit-Code 0 fertig ist, deployt mit `dotnet run -- deploy` (erwartet `Neue Version: Process_Genehmigung, Version 1`), führt `stack/smoke-test.sh` und danach die Prozesstests aus. Am Ende baut `docker compose down -v` den Stack ab. |
+| Musterlösung gegen die lokale Engine | übernimmt `loesung/` mit `cp -R loesung/src loesung/tests .`, baut, führt die Unit-Tests ohne Engine und ohne Zugangsdaten aus, startet `stack/` mit `docker compose up -d`, wartet, bis `init` mit Exit-Code 0 fertig ist, deployt mit `dotnet run -- deploy` (erwartet `Neue Version: Process_Genehmigung, Version 1`), führt `stack/smoke-test.sh` und danach die Prozesstests aus. Die Variante für den Prozesstest zum fachlichen Fehler deployt der Test selbst. Am Ende baut `docker compose down -v` den Stack ab. |
 
 Die Zugangsdaten setzt der Workflow als Umgebungsvariablen `EngineBenutzer` und `EnginePasswort` mit dem lokalen Dev-Benutzer `worker`, nur für Deployment und Prozesstests. Schlägt ein Schritt fehl, zeigt der Job `docker compose ps -a` und die letzten Log-Zeilen des Stacks. `dotnet run -- deploy`, die http-Datei und der Smoke-Test deployen alle mit dem Prozess-Key als `deployment-name`. Deshalb legt nur das erste Deployment eine Version an, die übrigen meldet die Engine als unverändert.
 
