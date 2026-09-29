@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace GenehmigungWorker.Tests;
 
 /// <summary>
@@ -33,6 +35,31 @@ public class GenehmigungVerbuchenHandlerTests
         // dann: genau eine Buchung, mit der Prozessinstanz-ID als Schlüssel und den Antragsdaten
         var aufruf = Assert.Single(fake.Aufrufe);
         Assert.Equal(new BuchungssystemFake.Aufruf("pi-4712", "anna", 1200m, "Fachtagung"), aufruf);
+    }
+
+    [Theory]
+    [InlineData("1234.5", 1234.5)] // aus dem easyForm-Feld "Zahl": Text, immer mit Punkt
+    [InlineData(1200L, 1200.0)]    // per REST gestartet: ganze Zahl, wie ExternalTaskClient sie auspackt
+    public void Liest_betrag_als_Text_und_als_Zahl_auch_auf_einem_deutschen_Rechner(object betrag, double erwartet)
+    {
+        // gegeben: ein Rechner mit deutscher Kultur, auf dem "1234.5" sonst 12345 ergäbe
+        var vorher = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+        try
+        {
+            var task = new ExternalTask("t-5", "genehmigung-verbuchen", null, null,
+                "pi-4715", new() { ["antragsteller"] = "anna", ["betrag"] = betrag,
+                                   ["begruendung"] = "Fachtagung" });
+            var fake = new BuchungssystemFake();
+            // wenn
+            new GenehmigungVerbuchenHandler(fake).Handle(task);
+            // dann: der Betrag kommt unverändert beim Fachsystem an
+            Assert.Equal((decimal) erwartet, Assert.Single(fake.Aufrufe).Betrag);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = vorher;
+        }
     }
 
     [Fact]

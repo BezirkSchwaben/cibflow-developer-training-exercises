@@ -20,7 +20,7 @@ public class BuchungssystemSimulation : IBuchungssystem
     /// <summary>Mehr gibt die Kostenstelle je Buchung nicht her, darüber lehnt die Simulation ab</summary>
     public const decimal BudgetJeBuchung = 50_000m;
 
-    // Beträge in der Meldung immer deutsch (60.000,00), egal wie der Rechner eingestellt ist
+    // Beträge in Meldung und Log immer deutsch (60.000,00), egal wie der Rechner eingestellt ist
     private static readonly CultureInfo Deutsch = CultureInfo.GetCultureInfo("de-DE");
 
     private static readonly JsonSerializerOptions Format = new()
@@ -73,7 +73,7 @@ public class BuchungssystemSimulation : IBuchungssystem
         _buchungen[schluessel] = new Buchung(nummer, antragsteller, betrag, begruendung, DateTimeOffset.Now);
         Speichern();
 
-        Log($"Verbucht: {nummer} für {antragsteller}, {betrag:0.00} Euro, \"{begruendung}\" (Schlüssel {schluessel})");
+        Log($"Verbucht: {nummer} für {antragsteller}, {betrag.ToString("N2", Deutsch)} Euro, \"{begruendung}\" (Schlüssel {schluessel})");
         return nummer;
     }
 

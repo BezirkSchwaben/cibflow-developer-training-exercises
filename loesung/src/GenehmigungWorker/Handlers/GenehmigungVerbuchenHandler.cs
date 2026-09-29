@@ -1,3 +1,4 @@
+using System.Globalization;
 using GenehmigungWorker.Fachsystem;
 
 namespace GenehmigungWorker.Handlers;
@@ -21,7 +22,14 @@ public class GenehmigungVerbuchenHandler
         // Eingabe lesen. Fehlt eine Variable, scheitert der Handler laut mit KeyNotFoundException,
         // die Schleife meldet dann failure.
         var antragsteller = (string) task.Variables["antragsteller"];
-        var betrag = Convert.ToDecimal(task.Variables["betrag"]);
+        // betrag kommt als Text aus dem easyForm ("1234.5", immer mit Punkt)
+        // oder als Zahl, etwa beim Start per REST. Beides kulturunabhängig lesen,
+        // sonst wird auf einem deutschen Rechner aus "1234.5" 12345.
+        var betrag = task.Variables["betrag"] switch
+        {
+            string text => decimal.Parse(text, CultureInfo.InvariantCulture),
+            var zahl => Convert.ToDecimal(zahl, CultureInfo.InvariantCulture),
+        };
         var begruendung = (string) task.Variables["begruendung"];
 
         // Arbeit tun: die eine Stelle nach außen
