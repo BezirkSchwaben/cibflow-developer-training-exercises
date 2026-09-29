@@ -1,10 +1,12 @@
 # Prüft das Übungs-Repo bei jedem Push und Pull Request auf main.
 #
-#   startstand     Der Startstand (Ende der Übung in Kapitel 11) baut, und seine Tests laufen durch.
-#                  Die Tests mit TODO sind übersprungen, nicht rot. Dazu: Das Projekt-ZIP passt zum Modell.
-#   musterloesung  Übernimmt die Musterlösung aus loesung/ mit dem Befehl aus dem Aufgabenblatt und prüft sie:
-#                  Build, Unit-Tests ohne Engine, Engine per Docker Compose,
-#                  Deployment mit "dotnet run -- deploy", Smoke-Test und die Prozesstests gegen die Engine.
+#   startstand       Der Startstand (Ende der Übung in Kapitel 11) baut, und seine Tests laufen durch.
+#                    Die Tests mit TODO sind übersprungen, nicht rot. Dazu: Das Projekt-ZIP passt zum Modell.
+#   musterloesung    Übernimmt die Musterlösung aus loesung/ mit dem Befehl aus dem Aufgabenblatt und prüft sie:
+#                    Build, Unit-Tests ohne Engine, Engine per Docker Compose,
+#                    Deployment mit "dotnet run -- deploy", Smoke-Test und die Prozesstests gegen die Engine.
+#   demo-kapitel-10  Die Java-Demo aus demo/kapitel-10-prozesstest-java: ihre vier Prozesstests laufen grün,
+#                    und ihre Modellkopie ist byte-gleich zu prozess/genehmigungsworkflow.bpmn.
 #
 # Warum die CI gegen reines CIB seven läuft und nicht gegen den CIB flow Stack aus stack/:
 # Die CIB flow Images liegen in einer privaten Registry (harbor.cib.de), die CI hat dafür keinen Zugang.
@@ -153,3 +155,35 @@ jobs:
         if: always()
         working-directory: .github/ci-stack
         run: docker compose down -v
+
+  demo-kapitel-10:
+    name: Demo Kapitel 10 (Java)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: demo/kapitel-10-prozesstest-java
+    steps:
+      - name: Repo auschecken
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Modellkopie passt zur Vorlage
+        run: |
+          # Die Demo ändert das Modell nur vorübergehend. Im Repo muss die Kopie byte-gleich zur Vorlage sein.
+          if ! cmp -s src/main/resources/genehmigungsworkflow.bpmn ../../prozess/genehmigungsworkflow.bpmn; then
+            echo "::error::Die Modellkopie der Demo weicht von prozess/genehmigungsworkflow.bpmn ab. Nach der Demo zurücksetzen (git restore demo/kapitel-10-prozesstest-java/src/main/resources/genehmigungsworkflow.bpmn) oder nach einer Änderung der Vorlage neu kopieren (cp prozess/genehmigungsworkflow.bpmn demo/kapitel-10-prozesstest-java/src/main/resources/)."
+            exit 1
+          fi
+
+      - name: JDK 21 einrichten
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: demo/kapitel-10-prozesstest-java/pom.xml
+
+      - name: Prozesstests ausführen (Engine im Speicher, kein Docker)
+        run: ./mvnw -B -ntp test

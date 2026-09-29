@@ -79,6 +79,8 @@ cibflow-developer-training-exercises/
 
 `stack/smoke-test.sh` prüft einen laufenden Stack per REST, mit allen drei Pfaden. Aufruf im Ordner `stack/` mit `./smoke-test.sh`, unter Windows in Git Bash mit `bash smoke-test.sh`. Stoppt vorher einen laufenden Worker. Mit `ENGINE_URL`, `PROZESS_KEY` und `BPMN` richtet ihr es auf eine andere Engine oder ein anderes Modell.
 
+Für die Demo in Kapitel 10 liegt unter [demo/kapitel-10-prozesstest-java](demo/kapitel-10-prozesstest-java/README.md) ein Prozesstest in Java mit der Engine im Speicher, die GitHub Action testet ihn bei jedem Push mit.
+
 Die GitHub Action `.github/workflows/build.yml` baut und testet bei jedem Push Startstand und Musterlösung. Warum sie dafür eine eigene Engine aus `.github/ci-stack/` startet, steht im Kommentar der Datei.
 
 ## Lizenz

@@ -4,6 +4,9 @@ obj/
 TestResults/
 *.user
 
+# Java-Build-Ausgaben (demo/kapitel-10-prozesstest-java)
+target/
+
 # IDEs
 .vs/
 .idea/
