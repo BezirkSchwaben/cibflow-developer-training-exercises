@@ -8,7 +8,7 @@ namespace GenehmigungWorker.Tests;
 [Trait("Kategorie", "Prozesstest")]
 public class GenehmigungsworkflowTests : IDisposable
 {
-    // Der Test-Helfer ist fertig: je Methode ein REST-Call, siehe EngineHelfer.cs
+    // Der Test-Helfer ist fertig: je Methode ein REST-Endpunkt, er wartet auf den Zustand. Siehe EngineHelfer.cs
     private readonly EngineHelfer _engine = new();
 
     // TODO Kapitel 12, Schritt 4: Test schreiben, Methode async machen, danach "(Skip = ...)" entfernen
