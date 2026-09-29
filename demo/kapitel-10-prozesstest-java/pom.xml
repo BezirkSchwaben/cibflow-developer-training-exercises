@@ -2,7 +2,8 @@
 <!--
   Demo zu Kapitel 10: Prozesstest für den Genehmigungsworkflow.
   Engine und Datenbank laufen im Speicher, ohne Server und ohne Spring Boot.
-  Alle Läufe mit ./mvnw test (Windows: mvnw.cmd test), Anleitung in README.md.
+  Alle Läufe mit ./mvnw test (Windows: .\mvnw.cmd test), Anleitung in README.md.
+  Maven selbst ist über .mvn/jvm.config leiser gestellt.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -26,6 +27,9 @@
     <assertj.version>3.27.7</assertj.version>
     <h2.version>2.3.232</h2.version>
     <slf4j.version>2.0.17</slf4j.version>
+
+    <!-- Zeichen im Testbaum. Zeigt die Konsole ? statt ✔ und ✘: -Dbaum.theme=ASCII -->
+    <baum.theme>UNICODE</baum.theme>
   </properties>
 
   <dependencyManagement>
@@ -125,15 +129,16 @@
         <configuration>
           <!--
             Testausgabe als Baum mit den @DisplayName. Die Meldungen der roten Tests stehen darunter
-            unter "Results", ohne die langen Stacktraces der Engine. Die vollständigen Berichte
-            liegen in target/surefire-reports. Logs aus dem Test erscheinen nicht auf der Konsole.
+            unter "Results", je Test eine Zeile mit dem Methodennamen, ohne die langen Stacktraces
+            der Engine. Die vollständigen Berichte und die Logs aus dem Test liegen in
+            target/surefire-reports, auf der Konsole erscheinen die Logs nicht.
           -->
           <reportFormat>plain</reportFormat>
           <consoleOutputReporter>
             <disable>true</disable>
           </consoleOutputReporter>
           <statelessTestsetInfoReporter implementation="org.apache.maven.plugin.surefire.extensions.junit5.JUnit5StatelessTestsetInfoTreeReporter">
-            <theme>UNICODE</theme>
+            <theme>${baum.theme}</theme>
             <printStacktraceOnError>false</printStacktraceOnError>
             <printStacktraceOnFailure>false</printStacktraceOnFailure>
             <printBlankLineBetweenTests>false</printBlankLineBetweenTests>

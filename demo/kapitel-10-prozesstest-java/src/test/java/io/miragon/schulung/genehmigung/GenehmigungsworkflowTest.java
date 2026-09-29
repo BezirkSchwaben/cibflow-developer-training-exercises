@@ -9,6 +9,12 @@ import static org.cibseven.bpm.engine.test.assertions.bpmn.BpmnAwareTests.runtim
 import static org.cibseven.bpm.engine.test.assertions.bpmn.BpmnAwareTests.task;
 import static org.cibseven.bpm.engine.test.assertions.bpmn.BpmnAwareTests.withVariables;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
+
+import org.assertj.core.api.Assertions;
+import org.cibseven.bpm.engine.runtime.Job;
 import org.cibseven.bpm.engine.runtime.ProcessInstance;
 import org.cibseven.bpm.engine.test.Deployment;
 import org.cibseven.bpm.engine.test.junit5.ProcessEngineExtension;
@@ -23,8 +29,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * Prozesstest für den Genehmigungsworkflow: Engine und Datenbank im Speicher, pro Test frisch deployt.
  * Der Test spielt alle Beteiligten selbst: Antragsteller:in, genehmigende Stelle, Worker.
  *
- * Jede Prüfung beantwortet eine von drei Fragen an die Engine:
+ * Die Prüfungen beantworten drei Fragen an die Engine:
  * Wartezustand (isWaitingAt), Pfad (hasPassed, hasNotPassed), Variablen (variables).
+ * Beim Timer kommt seine Fälligkeit dazu.
  * Der Test findet Elemente über die ID aus dem Modell, nie über die Beschriftung.
  */
 @ExtendWith(ProcessEngineExtension.class)
@@ -115,8 +122,12 @@ class GenehmigungsworkflowTest {
         speicherpunktAnstossen(antrag, "StartEvent_Antrag");
         assertThat(antrag).isWaitingAtExactly("Task_Pruefen");
 
-        // Nicht drei Tage warten: den Timer-Job gezielt ausführen
-        execute(job("Boundary_Timer", antrag));
+        // Der Timer ist in drei Tagen fällig. Nicht warten: den Timer-Job gezielt ausführen
+        Job timer = job("Boundary_Timer", antrag);
+        Date inDreiTagen = Date.from(Instant.now().plus(Duration.ofDays(3)));
+        Assertions.assertThat(timer.getDuedate()).as("Fälligkeit des Timers")
+            .isCloseTo(inDreiTagen, Duration.ofMinutes(1).toMillis());
+        execute(timer);
 
         // Non-interrupting: Die Erinnerung lief, "Antrag prüfen" wartet weiter und wurde nie beendet
         assertThat(antrag).isWaitingAtExactly("Task_Pruefen")
@@ -128,16 +139,18 @@ class GenehmigungsworkflowTest {
     /**
      * Startet wie das Startformular. antragsteller legt im laufenden System das Start-Event ab
      * (die angemeldete Person). Im Test ist niemand angemeldet, deshalb setzt ihn der Test selbst.
+     * Der Business Key "Antrag-1" macht die Instanz in den Meldungen erkennbar.
      */
     private static ProcessInstance antragStarten() {
-        return runtimeService().startProcessInstanceByKey("Process_Genehmigung", withVariables(
+        return runtimeService().startProcessInstanceByKey("Process_Genehmigung", "Antrag-1", withVariables(
             "betrag", 1200,
             "begruendung", "Dienstreise",
             "antragsteller", ANTRAGSTELLER));
     }
 
     /**
-     * Stößt den Speicherpunkt (asyncAfter) hinter einem Element an. Im laufenden System erledigt das
+     * Prüft, dass die Instanz genau an diesem Speicherpunkt steht (Wartezustand), und stößt ihn dann an.
+     * Der Speicherpunkt (asyncAfter) liegt hinter dem Element. Das Anstoßen erledigt im laufenden System
      * der Job Executor, die Engine im Speicher hat keinen.
      */
     private static void speicherpunktAnstossen(ProcessInstance antrag, String hinterElement) {
