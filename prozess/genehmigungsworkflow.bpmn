@@ -28,7 +28,7 @@
                   exporterVersion="1.0">
 
   <bpmn:collaboration id="Collaboration_Genehmigung">
-    <bpmn:participant id="Participant_Bezirk" name="Genehmigungsworkflow" processRef="Process_Genehmigung" />
+    <bpmn:participant id="Participant_Genehmigung" name="Genehmigungsworkflow" processRef="Process_Genehmigung" />
   </bpmn:collaboration>
 
   <bpmn:process id="Process_Genehmigung" name="Genehmigungsworkflow" isExecutable="true" camunda:versionTag="1.0" camunda:historyTimeToLive="P365D">
@@ -169,7 +169,7 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_Genehmigung">
 
-      <bpmndi:BPMNShape id="Participant_Bezirk_di" bpmnElement="Participant_Bezirk" isHorizontal="true">
+      <bpmndi:BPMNShape id="Participant_Genehmigung_di" bpmnElement="Participant_Genehmigung" isHorizontal="true">
         <dc:Bounds x="150" y="60" width="1040" height="480" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_Antragsteller_di" bpmnElement="Lane_Antragsteller" isHorizontal="true">
