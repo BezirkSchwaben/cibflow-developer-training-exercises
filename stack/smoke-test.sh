@@ -9,8 +9,9 @@
 #   ./smoke-test.sh          (Windows: in Git Bash "bash smoke-test.sh")
 #
 # Braucht nur bash und curl. Deployt prozess/genehmigungsworkflow.bpmn (unverändert
-# erzeugt das keine neue Version), legt eigene Instanzen mit Business Key "smoke-..."
-# an und löscht am Ende alle Instanzen dieses Laufs, die noch offen sind.
+# erzeugt das keine neue Version, außer beim ersten Mal nach dem Import des Projekt-ZIPs:
+# Das Prozessmanagement stellt mit eigener Quelle bereit), legt eigene Instanzen mit
+# Business Key "smoke-..." an und löscht am Ende alle Instanzen dieses Laufs, die noch offen sind.
 # Exit-Code 0: alles grün. Exit-Code 1: mindestens eine Prüfung fehlgeschlagen.
 set -u
 

@@ -1,7 +1,8 @@
 # Gemeinsame Konfiguration aller CIB flow Dienste, jeder Dienst importiert diese Datei.
 #
 # Für die Schulung geändert gegenüber der CIB-Vorlage:
-#   - eigener JWT-Schlüssel, nur für den lokalen Stack (steht auch in cibflow-plugins.properties)
+#   - eigener JWT-Schlüssel, nur für den lokalen Stack. Er steht auch in cibflow-plugins.properties
+#     und cibseven-webclient.properties, alle drei müssen gleich sein.
 #   - Engine-Adresse im Browser http://localhost:8080, wie EngineUrl im Worker
 #   - Autorisierung aus (ganz unten)
 #   - SSO/Keycloak und der Documentserver entfernt, beides läuft lokal nicht

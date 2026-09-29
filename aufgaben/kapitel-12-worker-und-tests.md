@@ -101,7 +101,7 @@ dotnet test
 
 Erwartet: Unit-Test und Prozesstest bestanden, keiner fehlgeschlagen. Die Gegenprobe bleibt übersprungen, bis ihr sie schreibt. Nur die Prozesstests startet `dotnet test --filter "Kategorie=Prozesstest"`.
 
-Der Prozesstest braucht, was auch der Worker braucht: laufenden Stack, deploytes Modell, Zugangsdaten. Er liest dieselbe Konfiguration, auch dieselben User Secrets. Jeder Lauf startet eine eigene Instanz mit Business Key `prozesstest-...` und räumt am Ende auf.
+Der Prozesstest braucht, was auch der Worker braucht: laufenden Stack, bereitgestelltes Modell, Zugangsdaten. Er liest dieselbe Konfiguration, auch dieselben User Secrets. Jeder Lauf startet eine eigene Instanz mit Business Key `prozesstest-...` und räumt am Ende auf.
 
 ### 5. End-to-end über das Formular
 
@@ -110,7 +110,7 @@ Folie „End-to-end: vom Formular bis zum Worker“.
 1. Worker starten und das Log offen lassen: `dotnet run --project src/GenehmigungWorker`
 2. Als `anna` einen Antrag stellen, als `gerda` „Antrag prüfen“ mit `genehmigt` abschließen, genau wie in [Kapitel 11, Schritt 8](kapitel-11-lokales-setup.md#8-antrag-stellen-und-genehmigen).
 3. Nach wenigen Sekunden zeigt das Log den geholten Task, eure Buchung und das `complete`.
-4. Prüfen im Cockpit, das in CIB flow in der Weboberfläche steckt: Die Liste der Prozesse öffnet ihr direkt unter http://localhost:7083/client/#/seven/auth/processes/list, dort „Genehmigungsworkflow“ wählen. Im Reiter „Instanzen“ steht eure Instanz mit Enddatum. Das Augen-Symbol öffnet sie, der Reiter „Variablen“ zeigt `buchungsnummer`.
+4. Prüfen im Cockpit, das in CIB flow in der Weboberfläche steckt: Die Liste der Prozesse öffnet ihr direkt unter http://localhost:7083/client/#/seven/auth/processes/list, dort „Genehmigungsworkflow“ wählen. Links in der „Versionshistorie“ ist die neueste Version gewählt. Stehen dort mehrere Versionen, etwa weil `deploy` nach dem Import Version 2 angelegt hat, wählt die Version, auf der eure Instanz lief. Im Reiter „Instanzen“ steht eure Instanz mit Enddatum. Das Augen-Symbol öffnet sie, der Reiter „Variablen“ zeigt `buchungsnummer`.
 
 Oder per REST:
 
@@ -138,7 +138,7 @@ Die erste Antwort nennt je Instanz `processInstanceId` und `value` der `buchungs
 
 - In Kapitel 11 stand der `try`/`catch` mit `complete` und `failure` noch im Handler. Jetzt gibt der Handler nur das Ergebnis zurück, zurückgemeldet wird einmal in der Schleife. Deshalb lässt sich der Handler ohne Engine testen.
 - `BusinessKey ?? ProcessInstanceId`: Das Startformular setzt keinen Business Key, der Worker loggt `Business Key (keiner)`. Im Formular-Lauf ist der Schlüssel deshalb die Prozessinstanz-ID. Der Prozesstest setzt seinen Business Key selbst.
-- `failure`: Beim ersten Fehler ist `Retries` null, der Worker meldet 3 verbleibende Versuche, danach zählt er herunter. Dazwischen liegen fünf Minuten, bei 0 legt die Engine einen Incident an. Wie viele Versuche übrig sind und warum es scheiterte, zeigt `curl -u worker:worker "http://localhost:8080/engine-rest/external-task?topicName=genehmigung-verbuchen"` in `retries` und `errorMessage`, Incidents seht ihr im Cockpit unter „Vorfälle“.
+- `failure`: Beim ersten Fehler ist `Retries` null, der Worker meldet 3 verbleibende Versuche, danach zählt er herunter. Dazwischen liegen fünf Minuten, bei 0 legt die Engine einen Incident an. Wie viele Versuche übrig sind und warum es scheiterte, zeigt `curl -u worker:worker "http://localhost:8080/engine-rest/external-task?topicName=genehmigung-verbuchen"` (PowerShell: `curl.exe`) in `retries` und `errorMessage`, Incidents seht ihr im Cockpit unter „Vorfälle“.
 - Idempotenz: Scheitert `CompleteAsync` nach einer erfolgreichen Buchung, läuft der `catch`, der Task kommt erneut, und der Handler bucht ein zweites Mal. Dagegen hilft nur ein Fachsystem, das den Schlüssel kennt. Genau das baut ihr im Bonus.
 - Habt ihr den Worker eben erst gestoppt, kann der Prozesstest rund 30 Sekunden brauchen. Die letzte Long-Polling-Anfrage des Workers bleibt in der Engine noch bis zu zehn Sekunden offen und kann den Task des Tests holen. Dann gehört er für 30 Sekunden dem gestoppten Worker. Der Test-Helfer fragt deshalb bis zu 45 Sekunden lang nach.
 - Die Tests im Startstand stehen auf `Skip`, damit `dotnet test` von Anfang an sauber durchläuft. Ein übersprungener Test ist kein grüner Test.
@@ -153,11 +153,12 @@ Die erste Antwort nennt je Instanz `processInstanceId` und `value` der `buchungs
 | Build-Fehler bei `new BuchungssystemSimulation()` | Ihr habt der Simulation im Bonus einen Konstruktorparameter gegeben. Passt den Aufruf in `Program.cs` an. |
 | `KeyNotFoundException: The given key 'betrag' was not present` | Die Variable fehlt in der Instanz oder ist falsch geschrieben. Die Namen sind Teil des Vertrags mit dem Modell. |
 | `InvalidCastException` bei `antragsteller` oder `begruendung` | Die Variable ist kein Text. `(string)` setzt Text voraus. |
-| Das Log zeigt `12.345,00 Euro` statt `1.234,50 Euro` | `betrag` kam als Text aus dem easyForm, und der Handler liest ihn mit deutscher Kultur. Schritt 1, `CultureInfo.InvariantCulture`. |
+| Die Buchung hat den zehn- oder hundertfachen Betrag, etwa `123450` statt `1234.50` (Musterlösung: `123.450,00 Euro` statt `1.234,50 Euro`), im Cockpit steht `betrag` aber richtig | `betrag` kam als Text aus dem easyForm, und der Handler liest ihn mit deutscher Kultur. Schritt 1, `CultureInfo.InvariantCulture`. |
+| Im Cockpit steht `betrag` schon falsch, etwa `123450` statt `1234.50`, oder die Instanz aus dem Formular endet ohne `buchungsnummer` | Ihr habt den Betrag in einem Browser mit englischer Spracheinstellung mit Komma eingegeben, das Zahlenfeld hat das Komma verschluckt. Schreibt ihn dort mit Punkt, siehe [Kapitel 11, Schritt 8](kapitel-11-lokales-setup.md#8-antrag-stellen-und-genehmigen). Über 50.000 Euro lehnt die Simulation der Musterlösung ab, und die Vorlage beendet die Instanz dann still, siehe Bonus fachlicher Fehler. |
 | Prozesstest: `Kein External Task auf Topic ... auch nicht nach 45 Sekunden` | Euer Worker läuft noch und hat den Task schon verbucht. Stoppt ihn. Oder die Instanz steht gar nicht am Service Task, dann stimmen Entscheidung oder Modell nicht. |
-| Prozesstest: `lieferte 404 NotFound` beim Start, mit Hinweis auf `deploy` | Modell nicht deployt, oder `ProzessKey` passt nicht zur Process ID des Modells. |
-| Prozesstest: `Die Engine unter http://localhost:8080/ antwortet nicht` | Der Stack läuft nicht. Im Ordner `stack/`: `docker compose up -d`. |
-| Prozesstest: `Zugangsdaten für die Engine fehlen` | Im Terminal fehlen die Umgebungsvariablen. Setzt sie oder nehmt User Secrets ([Kapitel 11, Schritt 4](kapitel-11-lokales-setup.md#4-appsettingsjson-prüfen-und-zugangsdaten-setzen)). |
+| Prozesstest: `lieferte 404 NotFound` beim Start, mit der Frage, ob das Modell bereitgestellt ist | Modell nicht bereitgestellt (Projekt-ZIP importieren, [Kapitel 11, Schritt 4](kapitel-11-lokales-setup.md#4-projekt-importieren)), oder `ProzessKey` passt nicht zur Process ID des Modells. |
+| Prozesstest: `Die Engine unter http://localhost:8080/ antwortet nicht` | Der Stack läuft nicht oder startet noch. Im Ordner `stack/`: `docker compose up -d`, dann warten, bis `docker compose logs init` mit `[init] Fertig.` endet. |
+| Prozesstest: `Zugangsdaten für die Engine fehlen` | Im Terminal fehlen die Umgebungsvariablen. Setzt sie oder nehmt User Secrets ([Kapitel 11, Schritt 6](kapitel-11-lokales-setup.md#6-appsettingsjson-prüfen-und-zugangsdaten-setzen)). |
 | Prozesstest: `lieferte 401 Unauthorized` | Benutzer oder Passwort falsch. `dotnet user-secrets list --project src/GenehmigungWorker` zeigt, was gesetzt ist. |
 | `dotnet test` meldet euren fertigen Test als übersprungen | `Skip` steht noch am `[Fact]`. |
 | Die Instanz hängt am Service Task „Genehmigung verbuchen“ | In dieser Reihenfolge prüfen: Schreibweise des Topics in Modell und `appsettings.json`, `EngineUrl`, Lock (ein abgestürzter Worker hält ihn bis zu 30 Sekunden), `failure` mit fünf Minuten Pause. |
@@ -256,7 +257,7 @@ Einzelne Dateien übernehmt ihr genauso, etwa `cp loesung/src/GenehmigungWorker/
 
 Mit der Musterlösung laufen `dotnet test --filter "Kategorie!=Prozesstest"` ohne Engine (9 Tests) und `dotnet test` mit laufendem Stack und bereitgestelltem Modell (12 Tests) grün. Die Variante für den Prozesstest zum fachlichen Fehler deployt der Test selbst. Genau das prüft auch die GitHub Action des Repos bei jedem Push.
 
-Zurück zum Startstand kommt ihr mit `git restore src tests`. Das verwirft alle eure Änderungen in diesen Ordnern.
+Zurück zum Startstand kommt ihr mit `git restore src tests` und `git clean -fd src tests`, in bash und PowerShell gleich. Das verwirft alle eure Änderungen in diesen Ordnern und löscht Dateien, die dort neu dazugekommen sind, auch eure eigenen. Ohne `git clean` bleiben etwa `ExternalTaskClientTests.cs` und `FehlerpfadTests.cs` aus der Musterlösung liegen, und der Startstand baut nicht mehr.
 
 Der Worker der Musterlösung loggt jeden Task:
 

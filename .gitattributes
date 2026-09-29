@@ -2,7 +2,7 @@
 * text=auto
 
 # Diese Dateien laufen in Linux-Containern oder werden dort gelesen.
-# Mit CRLF bricht das Init-Skript ab ("set: line 9: illegal option -"),
+# Mit CRLF bricht das Init-Skript ab ("illegal option -"),
 # deshalb immer LF, auch nach einem Checkout unter Windows.
 # Modell und Formulare stecken außerdem im Projekt-ZIP, das byte-gleich neu gebaut werden muss.
 *.sh          text eol=lf

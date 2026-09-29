@@ -2,7 +2,7 @@
 #
 # Für die Schulung geändert gegenüber der CIB-Vorlage:
 #   - LDAP, SSO, Passwort-Wiederherstellung per Mail und Dataflow entfernt, die Schulung nutzt sie nicht
-#   - Metering und Fehlerbericht bleiben ohne Ziel, die Vorgaben im Image zeigen auf CIB-Server
+#   - Metering ohne Ziel, Fehlerberichte an localhost:7080, wo nichts läuft. Die Vorgaben im Image zeigen auf CIB-Server.
 #   - Lizenzdatei nicht eingebunden
 # Adressen und JWT-Schlüssel kommen aus common-config.yaml.
 server:

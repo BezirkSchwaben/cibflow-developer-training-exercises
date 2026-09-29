@@ -2,7 +2,8 @@ namespace GenehmigungWorker.Tests;
 
 /// <summary>
 /// Prozesstests per REST gegen eure lokale Engine: Modell, Engine und Handler im Zusammenspiel.
-/// Voraussetzung: Stack läuft, Modell ist deployt (dotnet run -- deploy), euer Worker ist gestoppt.
+/// Voraussetzung: Stack läuft, Modell ist bereitgestellt (Projekt-ZIP importiert oder dotnet run -- deploy),
+/// euer Worker ist gestoppt.
 /// Nur die Unit-Tests ohne Engine: dotnet test --filter "Kategorie!=Prozesstest"
 /// </summary>
 [Trait("Kategorie", "Prozesstest")]

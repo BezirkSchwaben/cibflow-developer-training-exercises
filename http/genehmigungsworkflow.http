@@ -8,6 +8,7 @@
 # Die Engine antwortet auf http://localhost:8080, Anmeldung per Basic Auth.
 
 @baseUrl = http://localhost:8080/engine-rest
+# Mit eigenem Projekt: eure Process ID, wie ProzessKey in appsettings.json
 @prozessKey = Process_Genehmigung
 @topic = genehmigung-verbuchen
 @workerId = worker-lokal
@@ -27,7 +28,8 @@ Authorization: Basic {{worker}}:{{worker}}
 
 ### 2. BPMN deployen: prozess/genehmigungsworkflow.bpmn als neue Version einspielen
 # deployment-name ist der Prozess-Key, wie bei "dotnet run -- deploy" im Worker.
-# enable-duplicate-filtering: unverändertes Modell erzeugt keine neue Version
+# enable-duplicate-filtering: unverändertes Modell erzeugt keine neue Version. Ausnahme: das erste
+# Deployment nach dem Import des Projekt-ZIPs, das Prozessmanagement stellt mit eigener Quelle bereit.
 POST {{baseUrl}}/deployment/create
 Authorization: Basic {{worker}}:{{worker}}
 Content-Type: multipart/form-data; boundary=GrenzeGenehmigung

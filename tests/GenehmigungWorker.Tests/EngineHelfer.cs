@@ -266,7 +266,7 @@ public sealed class EngineHelfer : IDisposable
         => await LeseAsync<T>(await RufeAsync(() => _http.GetAsync(pfad)));
 
     // Schickt den Call und prüft die Antwort wie EnsureSuccessStatusCode, aber mit verständlicher
-    // Meldung: Engine nicht erreichbar, falsche Zugangsdaten, Modell nicht deployt
+    // Meldung: Engine nicht erreichbar, falsche Zugangsdaten, Modell nicht bereitgestellt
     private async Task<HttpResponseMessage> RufeAsync(Func<Task<HttpResponseMessage>> call)
     {
         HttpResponseMessage antwort;
@@ -279,7 +279,7 @@ public sealed class EngineHelfer : IDisposable
             throw new HttpRequestException(
                 $"Die Engine unter {_http.BaseAddress} antwortet nicht ({fehler.Message}). " +
                 "Läuft der Stack? Im Ordner stack/: docker compose up -d, dann warten, bis " +
-                "docker compose ps bei cibseven healthy zeigt. Nur die Unit-Tests ohne Engine: " +
+                "docker compose logs init mit \"[init] Fertig.\" endet. Nur die Unit-Tests ohne Engine: " +
                 "dotnet test --filter \"Kategorie!=Prozesstest\"",
                 fehler);
         }
@@ -292,7 +292,7 @@ public sealed class EngineHelfer : IDisposable
             HttpStatusCode.Unauthorized =>
                 " Stimmen EngineBenutzer und EnginePasswort (Umgebungsvariablen oder User Secrets)?",
             HttpStatusCode.NotFound when antwort.RequestMessage?.RequestUri?.AbsolutePath.Contains("/process-definition/key/") == true =>
-                " Ist das Modell deployt (dotnet run --project src/GenehmigungWorker -- deploy) " +
+                " Ist das Modell bereitgestellt (Projekt-ZIP importiert oder dotnet run --project src/GenehmigungWorker -- deploy) " +
                 "und steht dessen Process ID als ProzessKey in appsettings.json?",
             _ => ""
         };

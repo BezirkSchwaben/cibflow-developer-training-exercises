@@ -4,7 +4,7 @@
 
 ## Voraussetzungen
 
-- Docker Desktop mit mindestens 8 GB Speicher für Docker und rund 6 GB freiem Plattenplatz
+- Docker Desktop mit mindestens 8 GB Speicher für Docker und rund 6 GB freiem Plattenplatz. Wo ihr den Speicher unter macOS und Windows einstellt, steht in [stack/README.md](stack/README.md#voraussetzungen).
 - Zugangsdaten für `harbor.cib.de` aus der Setup-Mail
 - .NET SDK 10, Git und VS Code mit der Erweiterung REST Client (`humao.rest-client`)
 
@@ -14,7 +14,7 @@ dotnet --version     # 10.0.x
 git --version
 ```
 
-> Docker Desktop ist nur für kleine Unternehmen (weniger als 250 Beschäftigte und weniger als 10 Mio. USD Jahresumsatz), private Nutzung, Bildung und nichtkommerzielle Open-Source-Projekte kostenlos. Größere Organisationen und Behörden brauchen ein kostenpflichtiges Abo, siehe [Docker Desktop License Agreement](https://docs.docker.com/subscription/desktop-license/). Podman Desktop und Rancher Desktop sind kostenlos, mit diesem Stack aber nicht getestet.
+> Für Behörden und für Unternehmen ab 250 Beschäftigten oder 10 Mio. USD Jahresumsatz kostet Docker Desktop eine Lizenz, siehe [Docker Desktop License Agreement](https://docs.docker.com/subscription/desktop-license/). Podman Desktop und Rancher Desktop sind kostenlos, mit diesem Stack aber nicht getestet.
 
 ## Schnellstart
 
@@ -24,14 +24,15 @@ git --version
    cd cibflow-developer-training-exercises
    docker login harbor.cib.de
    ```
-2. CIB flow starten und etwa eine Minute warten:
+2. CIB flow starten. Beim ersten Mal lädt Docker die Images, das dauert einige Minuten. Fertig ist der Stack, wenn `docker compose logs init` mit `[init] Fertig.` endet. Wiederholt den Befehl, bis es so weit ist:
    ```bash
    cd stack
    docker compose up -d
+   docker compose logs init
    cd ..
    ```
 3. http://localhost:7083/client öffnen und als `demo` mit Passwort `demo` anmelden.
-4. Projekt importieren: Kachel „Prozessmanagement“, „Lokale Datei importieren“, euer Projekt-ZIP oder `prozess/genehmigungsworkflow-projekt.zip` wählen, „Automatisch bereitstellen“ an lassen, „Importieren“.
+4. Projekt importieren: Kachel „Prozessmanagement“, „Lokale Datei importieren“, euer Projekt-ZIP oder `prozess/genehmigungsworkflow-projekt.zip` wählen, „Automatisch bereitstellen“ an lassen, „Importieren“. Mit eigenem Projekt tragt ihr dessen Process ID als `ProzessKey` in `src/GenehmigungWorker/appsettings.json` ein.
 5. Worker starten:
    ```bash
    dotnet user-secrets set EngineBenutzer worker --project src/GenehmigungWorker
@@ -76,10 +77,10 @@ cibflow-developer-training-exercises/
 
 ## Für Trainer
 
-`stack/smoke-test.sh` prüft einen laufenden Stack ohne Klicken: Anmeldung, Deployment der Vorlage und alle drei Pfade (genehmigt, abgelehnt, nachbessern). Aufruf im Ordner `stack/` mit `./smoke-test.sh`, unter Windows in Git Bash. Exit-Code 0 heißt alles grün. Stoppt vorher einen laufenden Worker. Mit `ENGINE_URL`, `PROZESS_KEY` und `BPMN` lässt es sich auf eine andere Engine oder ein anderes Modell richten.
+`stack/smoke-test.sh` prüft einen laufenden Stack per REST, mit allen drei Pfaden. Aufruf im Ordner `stack/` mit `./smoke-test.sh`, unter Windows in Git Bash mit `bash smoke-test.sh`. Stoppt vorher einen laufenden Worker. Mit `ENGINE_URL`, `PROZESS_KEY` und `BPMN` richtet ihr es auf eine andere Engine oder ein anderes Modell.
 
-Die GitHub Action `.github/workflows/build.yml` baut bei jedem Push den Startstand und die Musterlösung, prüft das Projekt-ZIP und führt Smoke-Test und Prozesstests aus. Sie läuft gegen reines CIB seven aus `.github/ci-stack/`, weil die CI keinen Zugang zu den CIB flow Images hat. Engine und REST-API sind dieselben.
+Die GitHub Action `.github/workflows/build.yml` baut und testet bei jedem Push Startstand und Musterlösung. Warum sie dafür eine eigene Engine aus `.github/ci-stack/` startet, steht im Kommentar der Datei.
 
 ## Lizenz
 
-MIT, siehe [LICENSE](LICENSE).
+MIT, siehe [LICENSE](LICENSE). Ausgenommen sind die Konfigurationsdateien unter `stack/config/`: Sie beruhen auf der Docker-Compose-Vorlage von CIB software GmbH für CIB flow.

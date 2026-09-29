@@ -59,7 +59,7 @@ jobs:
 
       - name: Projekt-ZIP passt zum Modell
         run: |
-          # Das BPMN im Rückfall-ZIP muss byte-gleich prozess/genehmigungsworkflow.bpmn sein
+          # Das BPMN im Projekt-ZIP muss byte-gleich prozess/genehmigungsworkflow.bpmn sein
           if ! unzip -p prozess/genehmigungsworkflow-projekt.zip diagrams/genehmigungsworkflow.bpmn \
               | cmp -s - prozess/genehmigungsworkflow.bpmn; then
             echo "::error::Das BPMN im Projekt-ZIP weicht von prozess/genehmigungsworkflow.bpmn ab. Neu bauen: python3 prozess/projekt-zip-bauen.py"
