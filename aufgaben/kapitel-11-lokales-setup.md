@@ -18,7 +18,7 @@ Den Code für diese Übung bekommt ihr fertig. Ihr schreibt hier noch nichts, ih
 | `src/GenehmigungWorker/Deploy.cs` | spielt `prozess/genehmigungsworkflow.bpmn` per Multipart-Request ein | Deployment aus der IDE |
 | `src/GenehmigungWorker/Program.cs` | Skeleton-Schleife: holt Tasks und loggt sie, schickt aber kein `complete` | |
 
-Ihr braucht Docker Desktop mit mindestens 8 GB Speicher für Docker (wo ihr das unter macOS und Windows einstellt, steht in [stack/README.md](../stack/README.md#voraussetzungen)), die Zugangsdaten für `harbor.cib.de` aus der Setup-Mail, das .NET SDK 10, Git und VS Code. Die Ports 8080, 7083, 7086 und 7088 bis 7091 müssen frei sein.
+Ihr braucht Docker Desktop mit mindestens 8 GB Speicher für Docker (wo ihr das unter macOS und Windows einstellt, steht in [stack/README.md](../stack/README.md#voraussetzungen)), die Zugangsdaten für `harbor.cib.de` aus der Setup-Mail, das .NET SDK 10, Git und VS Code, für den Prozesstest in Java in Kapitel 12 außerdem JDK 21. Die Ports 8080, 7083, 7086 und 7088 bis 7091 müssen frei sein.
 
 ## Das macht ihr
 
@@ -29,6 +29,7 @@ Alle Befehle laufen im Repo-Root, außer es steht etwas anderes dabei. Wo sich b
 ```bash
 docker compose version
 dotnet --version           # 10.0.x
+java -version              # 21 oder neuer, für Kapitel 12
 git --version
 ```
 
@@ -54,7 +55,7 @@ Beim ersten Start lädt Docker sieben CIB-flow-Images von `harbor.cib.de` und zw
 
 Geht danach zurück in den Repo-Root: `cd ..`
 
-Während ihr wartet, lest `ExternalTaskClient.cs` und `Deploy.cs`. Ihr findet dort den Code von den Folien wieder. Konten, Adressen und Probleme mit dem Stack stehen in [stack/README.md](../stack/README.md).
+Während ihr wartet, lest `ExternalTaskClient.cs` und `Deploy.cs`. Ihr findet dort den Code von den Folien wieder. Habt ihr den Prozesstest in Java noch nie gestartet, lasst ihn jetzt einmal laufen, damit Maven und die Bibliotheken für Kapitel 12 da sind: im Repo-Root `cd java-prozesstest`, dann `./mvnw test` (PowerShell: `.\mvnw.cmd test`) und `cd ..`. Erwartet sind 1 bestandener und 3 übersprungene Tests. Konten, Adressen und Probleme mit dem Stack stehen in [stack/README.md](../stack/README.md).
 
 ### 3. Anmelden
 

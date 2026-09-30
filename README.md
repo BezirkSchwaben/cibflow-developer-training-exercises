@@ -1,16 +1,18 @@
 # CIB flow Developer Training Exercises
 
-Übungs-Repo für den Entwickler-Track der CIB flow Intensivschulung. Hier startet ihr CIB flow lokal, importiert euer Projekt und schreibt am zweiten Tag den External Task Worker in C# für den Genehmigungsworkflow, samt Unit-Test und Prozesstest.
+Übungs-Repo für den Entwickler-Track der CIB flow Intensivschulung. Hier startet ihr CIB flow lokal, importiert euer Projekt und schreibt am zweiten Tag den External Task Worker in C# für den Genehmigungsworkflow, samt Unit-Test und Prozesstests in C# und in Java.
 
 ## Voraussetzungen
 
 - Docker Desktop mit mindestens 8 GB Speicher für Docker und rund 6 GB freiem Plattenplatz. Wo ihr den Speicher unter macOS und Windows einstellt, steht in [stack/README.md](stack/README.md#voraussetzungen).
 - Zugangsdaten für `harbor.cib.de` aus der Setup-Mail
 - .NET SDK 10, Git und VS Code mit der Erweiterung REST Client (`humao.rest-client`)
+- JDK 21 für den Prozesstest in Java, etwa Eclipse Temurin. Maven braucht ihr nicht, das Projekt bringt den Maven Wrapper mit.
 
 ```bash
 docker compose version
 dotnet --version     # 10.0.x
+java -version        # 21 oder neuer
 git --version
 ```
 
@@ -40,6 +42,24 @@ git --version
    dotnet run --project src/GenehmigungWorker
    ```
 
+Den Prozesstest in Java lasst ihr einmal vorab laufen, am besten gleich nach dem Klonen. Der erste Lauf lädt Maven und die Bibliotheken, rund 55 MB, danach geht es auch ohne Netz. Stack und Worker braucht er nicht. Im Repo-Root, bei laufendem Worker in einem zweiten Terminal:
+
+```bash
+# macOS, Linux, Git Bash
+cd java-prozesstest
+./mvnw test
+cd ..
+```
+
+```powershell
+# Windows PowerShell
+cd java-prozesstest
+.\mvnw.cmd test
+cd ..
+```
+
+Erwartet: `Tests run: 4, Failures: 0, Errors: 0, Skipped: 3`. Die drei übersprungenen Tests schreibt ihr in Kapitel 12.
+
 Konten, Adressen und typische Probleme mit dem Stack stehen in [stack/README.md](stack/README.md). Jeden Schritt ausführlich, mit PowerShell-Varianten, zeigen die Aufgabenblätter.
 
 ## Die Übungen
@@ -47,7 +67,7 @@ Konten, Adressen und typische Probleme mit dem Stack stehen in [stack/README.md]
 | Kapitel | Zeit (Tag 2) | Aufgabenblatt | Am Ende |
 |---|---|---|---|
 | 11 · External Tasks | 13:30 bis 14:15 | [Übung: Lokales Setup](aufgaben/kapitel-11-lokales-setup.md) | CIB flow läuft lokal mit eurem Projekt, der Worker holt den Task „Genehmigung verbuchen“ und loggt ihn |
-| 12 · Worker und Tests | 14:15 bis 15:15 | [Übung: Der Worker](aufgaben/kapitel-12-worker-und-tests.md) | Der Worker verbucht jede Genehmigung, Unit-Test und Prozesstest laufen grün |
+| 12 · Worker und Tests | 14:15 bis 15:15 | [Übung: Der Worker](aufgaben/kapitel-12-worker-und-tests.md) | Der Worker verbucht jede Genehmigung, Unit-Test und Prozesstests in C# und Java laufen grün |
 
 Jedes Aufgabenblatt nennt Ausgangslage, Schritte, woran ihr seht, dass ihr fertig seid, und die typischen Stolpersteine.
 
@@ -71,18 +91,18 @@ cibflow-developer-training-exercises/
 ├── GenehmigungWorker.sln               # Solution für den Worker und seine Tests
 ├── src/GenehmigungWorker/              # der External Task Worker (Konsolen-App, .NET 10)
 ├── tests/GenehmigungWorker.Tests/      # Unit-Tests und Prozesstests (xUnit)
-├── loesung/                            # Musterlösung zu Kapitel 12, gleiche Pfade wie src/ und tests/
-├── demo/kapitel-10-prozesstest-java/   # Trainer-Demo zu Kapitel 10: Prozesstest in Java
-└── .github/                            # CI: baut und testet Startstand, Musterlösung und die Java-Demo
+├── java-prozesstest/                   # Prozesstest in Java, Engine im Speicher: Übung Kapitel 12, Demo Kapitel 10
+├── loesung/                            # Musterlösung zu Kapitel 12, gleiche Pfade wie src/, tests/ und java-prozesstest/
+└── .github/                            # CI: baut und testet Startstand und Musterlösung, in C# und Java
 ```
 
 ## Für Trainer
 
 `stack/smoke-test.sh` prüft einen laufenden Stack per REST, mit allen drei Pfaden. Aufruf im Ordner `stack/` mit `./smoke-test.sh`, unter Windows in Git Bash mit `bash smoke-test.sh`. Stoppt vorher einen laufenden Worker. Mit `ENGINE_URL`, `PROZESS_KEY` und `BPMN` richtet ihr es auf eine andere Engine oder ein anderes Modell.
 
-Für die Demo in Kapitel 10 liegt unter [demo/kapitel-10-prozesstest-java](demo/kapitel-10-prozesstest-java/README.md) ein Prozesstest in Java mit der Engine im Speicher.
+Die Demo in Kapitel 10 läuft mit dem Projekt aus der Übung, `java-prozesstest/`, und seiner Musterlösung. Vorbereitung, Ablauf, die erwarteten Meldungen und das Zurücksetzen stehen in seiner [README](java-prozesstest/README.md#demo-kapitel-10-trainer).
 
-Die GitHub Action `.github/workflows/build.yml` baut und testet bei jedem Push Startstand, Musterlösung und die Java-Demo. Warum sie für die Musterlösung eine eigene Engine aus `.github/ci-stack/` startet, steht im Kommentar der Datei.
+Die GitHub Action `.github/workflows/build.yml` baut und testet bei jedem Push Startstand und Musterlösung, jeweils in C# und in Java. Warum sie für die Musterlösung eine eigene Engine aus `.github/ci-stack/` startet, steht im Kommentar der Datei.
 
 ## Lizenz
 

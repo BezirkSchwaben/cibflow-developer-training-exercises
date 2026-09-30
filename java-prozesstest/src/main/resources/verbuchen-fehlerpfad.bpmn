@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Variante, nicht die Vorlage: der Ausschnitt ab "Genehmigung erteilt" mit einem fachlichen
+  Fehlerpfad am External Task "Genehmigung verbuchen", wie in Kapitel 04 und 11 der Folien.
+
+  Die Vorlage prozess/genehmigungsworkflow.bpmn hat kein Error-Boundary, keinen Send Task
+  "Genehmigung mitteilen" und keinen User Task "Buchung klären". Eigene Process ID
+  Process_VerbuchenFehlerpfad, damit ein Deployment die Vorlage nicht berührt.
+  Das Topic ist dasselbe, genehmigung-verbuchen: Euer Worker bedient beide Modelle.
+
+  Der Worker meldet eine abgelehnte Buchung per bpmnError mit errorCode BUCHUNG_ABGELEHNT,
+  den Grund schickt er in errorMessage. Das Error-Boundary "Buchung abgelehnt" legt beides
+  in den Variablen errorCode und errorMessage ab und führt zu "Buchung klären".
+
+  Die Variante hat weder Startformular noch Initiator. Startet sie per REST und gebt
+  antragsteller, betrag und begruendung mit, siehe http/genehmigungsworkflow.http.
+  Deployen, Starten und Prüfen beschreibt der Bonus "Fachlicher Fehler" in
+  aufgaben/kapitel-12-worker-und-tests.md.
+-->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Definitions_VerbuchenFehlerpfad"
+                  targetNamespace="https://miragon.io/schulung/verbuchen-fehlerpfad"
+                  exporter="Miragon"
+                  exporterVersion="1.0">
+
+  <bpmn:error id="Error_BuchungAbgelehnt" name="Buchung abgelehnt" errorCode="BUCHUNG_ABGELEHNT" />
+
+  <bpmn:process id="Process_VerbuchenFehlerpfad" name="Genehmigung verbuchen mit Fehlerpfad" isExecutable="true" camunda:versionTag="1.0" camunda:historyTimeToLive="P365D">
+
+    <bpmn:startEvent id="Start_GenehmigungErteilt" name="Genehmigung erteilt">
+      <bpmn:outgoing>Flow_Start_Verbuchen</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask id="Task_Verbuchen" name="Genehmigung verbuchen" camunda:type="external" camunda:topic="genehmigung-verbuchen">
+      <bpmn:incoming>Flow_Start_Verbuchen</bpmn:incoming>
+      <bpmn:outgoing>Flow_Verbuchen_Mitteilen</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:boundaryEvent id="Boundary_BuchungAbgelehnt" name="Buchung abgelehnt" attachedToRef="Task_Verbuchen">
+      <bpmn:outgoing>Flow_Abgelehnt_Klaeren</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_BuchungAbgelehnt" errorRef="Error_BuchungAbgelehnt" camunda:errorCodeVariable="errorCode" camunda:errorMessageVariable="errorMessage" />
+    </bpmn:boundaryEvent>
+
+    <bpmn:sendTask id="Task_GenehmigungMitteilen" name="Genehmigung mitteilen" camunda:expression="${execution.setVariable('genehmigungMitgeteilt', true)}">
+      <bpmn:incoming>Flow_Verbuchen_Mitteilen</bpmn:incoming>
+      <bpmn:outgoing>Flow_Mitteilen_Ende</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:endEvent id="End_Genehmigt" name="Antrag genehmigt">
+      <bpmn:incoming>Flow_Mitteilen_Ende</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:userTask id="Task_BuchungKlaeren" name="Buchung klären" camunda:candidateGroups="genehmiger">
+      <bpmn:incoming>Flow_Abgelehnt_Klaeren</bpmn:incoming>
+      <bpmn:outgoing>Flow_Klaeren_Ende</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:endEvent id="End_BuchungGeklaert" name="Buchung geklärt">
+      <bpmn:incoming>Flow_Klaeren_Ende</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_Start_Verbuchen" sourceRef="Start_GenehmigungErteilt" targetRef="Task_Verbuchen" />
+    <bpmn:sequenceFlow id="Flow_Verbuchen_Mitteilen" sourceRef="Task_Verbuchen" targetRef="Task_GenehmigungMitteilen" />
+    <bpmn:sequenceFlow id="Flow_Mitteilen_Ende" sourceRef="Task_GenehmigungMitteilen" targetRef="End_Genehmigt" />
+    <bpmn:sequenceFlow id="Flow_Abgelehnt_Klaeren" sourceRef="Boundary_BuchungAbgelehnt" targetRef="Task_BuchungKlaeren" />
+    <bpmn:sequenceFlow id="Flow_Klaeren_Ende" sourceRef="Task_BuchungKlaeren" targetRef="End_BuchungGeklaert" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_VerbuchenFehlerpfad">
+
+      <bpmndi:BPMNShape id="Start_GenehmigungErteilt_di" bpmnElement="Start_GenehmigungErteilt">
+        <dc:Bounds x="162" y="122" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="139" y="165" width="82" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Verbuchen_di" bpmnElement="Task_Verbuchen" bioc:stroke="#335DE5" bioc:fill="#EEF2FE">
+        <dc:Bounds x="250" y="100" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_GenehmigungMitteilen_di" bpmnElement="Task_GenehmigungMitteilen">
+        <dc:Bounds x="410" y="100" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="End_Genehmigt_di" bpmnElement="End_Genehmigt">
+        <dc:Bounds x="572" y="122" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="548" y="165" width="84" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_BuchungKlaeren_di" bpmnElement="Task_BuchungKlaeren">
+        <dc:Bounds x="410" y="230" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="End_BuchungGeklaert_di" bpmnElement="End_BuchungGeklaert">
+        <dc:Bounds x="572" y="252" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="551" y="295" width="78" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Boundary_BuchungAbgelehnt_di" bpmnElement="Boundary_BuchungAbgelehnt">
+        <dc:Bounds x="282" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="214" y="204" width="78" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_Start_Verbuchen_di" bpmnElement="Flow_Start_Verbuchen">
+        <di:waypoint x="198" y="140" />
+        <di:waypoint x="250" y="140" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Verbuchen_Mitteilen_di" bpmnElement="Flow_Verbuchen_Mitteilen">
+        <di:waypoint x="350" y="140" />
+        <di:waypoint x="410" y="140" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Mitteilen_Ende_di" bpmnElement="Flow_Mitteilen_Ende">
+        <di:waypoint x="510" y="140" />
+        <di:waypoint x="572" y="140" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Abgelehnt_Klaeren_di" bpmnElement="Flow_Abgelehnt_Klaeren">
+        <di:waypoint x="300" y="198" />
+        <di:waypoint x="300" y="270" />
+        <di:waypoint x="410" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Klaeren_Ende_di" bpmnElement="Flow_Klaeren_Ende">
+        <di:waypoint x="510" y="270" />
+        <di:waypoint x="572" y="270" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

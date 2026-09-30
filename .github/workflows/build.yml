@@ -1,17 +1,20 @@
 # Prüft das Übungs-Repo bei jedem Push und Pull Request auf main.
 #
-#   startstand       Der Startstand (Ende der Übung in Kapitel 11) baut, und seine Tests laufen durch.
-#                    Die Tests mit TODO sind übersprungen, nicht rot. Dazu: Das Projekt-ZIP passt zum Modell.
-#   musterloesung    Übernimmt die Musterlösung aus loesung/ mit dem Befehl aus dem Aufgabenblatt und prüft sie:
-#                    Build, Unit-Tests ohne Engine, Engine per Docker Compose,
-#                    Deployment mit "dotnet run -- deploy", Smoke-Test und die Prozesstests gegen die Engine.
-#   demo-kapitel-10  Die Java-Demo aus demo/kapitel-10-prozesstest-java: ihre vier Prozesstests laufen grün,
-#                    und ihre Modellkopie ist byte-gleich zu prozess/genehmigungsworkflow.bpmn.
+#   startstand          Der Startstand (Ende der Übung in Kapitel 11) baut, und seine Tests laufen durch.
+#                       Die Tests mit TODO sind übersprungen, nicht rot. Dazu: Das Projekt-ZIP passt zum Modell.
+#   musterloesung       Übernimmt die Musterlösung aus loesung/ mit dem Befehl aus dem Aufgabenblatt und prüft sie:
+#                       Build, Unit-Tests ohne Engine, Engine per Docker Compose,
+#                       Deployment mit "dotnet run -- deploy", Smoke-Test und die Prozesstests gegen die Engine.
+#   java-startstand     Der Prozesstest in Java unter java-prozesstest/: Die Modellkopien sind byte-gleich zu Vorlage
+#                       und Variante, der Happy Path läuft grün, die drei TODO-Tests sind übersprungen, nicht rot.
+#   java-musterloesung  Übernimmt die Musterlösung aus loesung/java-prozesstest/ mit dem Befehl aus dem Aufgabenblatt:
+#                       alle Tests grün, keiner übersprungen, der Bonus Fehlerpfad eingeschlossen.
+#                       Die Java-Jobs brauchen weder Docker noch Zugangsdaten, die Engine läuft im Speicher.
 #
 # Warum die CI gegen reines CIB seven läuft und nicht gegen den CIB flow Stack aus stack/:
 # Die CIB flow Images liegen in einer privaten Registry (harbor.cib.de), die CI hat dafür keinen Zugang.
-# CIB flow läuft auf der Engine CIB seven, mit derselben REST-API. Worker, Deployment, Smoke-Test und
-# Prozesstests sprechen nur mit dieser REST-API, deshalb prüft .github/ci-stack/ sie genauso gut.
+# CIB flow läuft auf der Engine CIB seven, mit derselben REST-API. Worker, Deployment, Smoke-Test und die
+# Prozesstests in C# sprechen nur mit dieser REST-API, deshalb prüft .github/ci-stack/ sie genauso gut.
 # Die Formulare (easyForms) prüft die CI nicht, sie brauchen CIB flow.
 #
 # Die Zugangsdaten sind die lokalen Dev-Benutzer, die stack/init/benutzer-anlegen.sh anlegt (worker/worker).
@@ -156,26 +159,33 @@ jobs:
         working-directory: .github/ci-stack
         run: docker compose down -v
 
-  demo-kapitel-10:
-    name: Demo Kapitel 10 (Java)
+  java-startstand:
+    name: Java-Prozesstest (Startstand)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
       run:
-        working-directory: demo/kapitel-10-prozesstest-java
+        working-directory: java-prozesstest
     steps:
       - name: Repo auschecken
         uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - name: Modellkopie passt zur Vorlage
+      - name: Modellkopien passen zu Vorlage und Variante
         run: |
-          # Die Demo ändert das Modell nur vorübergehend. Im Repo muss die Kopie byte-gleich zur Vorlage sein.
-          if ! cmp -s src/main/resources/genehmigungsworkflow.bpmn ../../prozess/genehmigungsworkflow.bpmn; then
-            echo "::error::Die Modellkopie der Demo weicht von prozess/genehmigungsworkflow.bpmn ab. Nach der Demo zurücksetzen (git restore demo/kapitel-10-prozesstest-java/src/main/resources/genehmigungsworkflow.bpmn) oder nach einer Änderung der Vorlage neu kopieren (cp prozess/genehmigungsworkflow.bpmn demo/kapitel-10-prozesstest-java/src/main/resources/)."
-            exit 1
-          fi
+          # Die Demo in Kapitel 10 ändert das Modell nur vorübergehend. Im Repo müssen die Kopien byte-gleich bleiben.
+          fehler=0
+          for paar in "genehmigungsworkflow.bpmn:../prozess/genehmigungsworkflow.bpmn" \
+                      "verbuchen-fehlerpfad.bpmn:../prozess/varianten/verbuchen-fehlerpfad.bpmn"; do
+            kopie="src/main/resources/${paar%%:*}"
+            vorlage="${paar#*:}"
+            if ! cmp -s "$kopie" "$vorlage"; then
+              echo "::error::java-prozesstest/$kopie weicht von ${vorlage#../} ab. Nach der Demo zurücksetzen (git restore java-prozesstest) oder nach einer Änderung der Vorlage neu kopieren (cp ${vorlage#../} java-prozesstest/src/main/resources/)."
+              fehler=1
+            fi
+          done
+          exit $fehler
 
       - name: JDK 21 einrichten
         uses: actions/setup-java@v6
@@ -183,7 +193,65 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
-          cache-dependency-path: demo/kapitel-10-prozesstest-java/pom.xml
+          cache-dependency-path: java-prozesstest/pom.xml
 
-      - name: Prozesstests ausführen (Engine im Speicher, kein Docker)
+      - name: Prozesstests ausführen (Engine im Speicher, die TODO-Tests sind übersprungen)
         run: ./mvnw -B -ntp test
+
+      - name: Startstand meldet 1 bestanden, 3 übersprungen
+        run: |
+          # Überspringen ist für Maven kein Fehler. Hier fällt auf, wenn die Musterlösung im Startstand gelandet ist
+          # oder sich die Zahl der Tests ändert, ohne dass README und Aufgabenblatt mitziehen.
+          bericht=target/surefire-reports/TEST-io.miragon.schulung.genehmigung.GenehmigungsworkflowTest.xml
+          kopf=$(grep -o '<testsuite [^>]*>' "$bericht")
+          echo "$kopf"
+          for erwartet in 'tests="4"' 'skipped="3"' 'failures="0"' 'errors="0"'; do
+            case "$kopf" in
+              *"$erwartet"*) ;;
+              *) echo "::error::Im Startstand erwartet: 4 Tests, 3 übersprungen. Abweichung bei $erwartet"; exit 1 ;;
+            esac
+          done
+          anzahl=$(ls target/surefire-reports/TEST-*.xml | wc -l)
+          if [ "$anzahl" -ne 1 ]; then
+            echo "::error::Im Startstand erwartet: genau eine Testklasse, gefunden: $anzahl"
+            exit 1
+          fi
+
+  java-musterloesung:
+    name: Java-Prozesstest (Musterlösung)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Repo auschecken
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Musterlösung übernehmen
+        run: cp -R loesung/java-prozesstest/src java-prozesstest/
+
+      - name: JDK 21 einrichten
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: java-prozesstest/pom.xml
+
+      - name: Prozesstests ausführen (Engine im Speicher)
+        working-directory: java-prozesstest
+        run: ./mvnw -B -ntp test
+
+      - name: Kein Test übersprungen, Bonus Fehlerpfad dabei
+        working-directory: java-prozesstest
+        run: |
+          # Maven zählt übersprungene Tests nicht als Fehler. In der Musterlösung darf keiner übersprungen sein.
+          grep -o '<testsuite [^>]*>' target/surefire-reports/TEST-*.xml
+          if grep -o '<testsuite [^>]*>' target/surefire-reports/TEST-*.xml | grep -v 'skipped="0"'; then
+            echo "::error::In der Musterlösung ist ein Test übersprungen"
+            exit 1
+          fi
+          if [ ! -f target/surefire-reports/TEST-io.miragon.schulung.genehmigung.FehlerpfadTest.xml ]; then
+            echo "::error::Der Bonus FehlerpfadTest ist nicht gelaufen"
+            exit 1
+          fi

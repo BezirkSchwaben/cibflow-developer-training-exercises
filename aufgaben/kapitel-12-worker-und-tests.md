@@ -2,12 +2,13 @@
 
 Tag 2, Entwickler-Track, Kapitel 12 „Worker und Tests“ (14:15 bis 15:15 Uhr, Hands-on 60 Minuten).
 
-Euer Worker aus Kapitel 11 holt den Task schon, verbucht aber nichts. Am Ende verbucht er jede Genehmigung, und zwei Tests belegen das.
+Euer Worker aus Kapitel 11 holt den Task schon, verbucht aber nichts. Am Ende verbucht er jede Genehmigung, ein Unit-Test und Prozesstests in C# und in Java belegen das.
 
 ## Vorab
 
-- Der Prozesstest nimmt den Prozess-Key als `_engine.ProzessKey` aus `appsettings.json`: `Process_Genehmigung` mit der Vorlage, euer eigener Key mit eurem Projekt. Auf der Folie steht an dieser Stelle `"mm-genehmigung"`.
+- Der Prozesstest in C# nimmt den Prozess-Key als `_engine.ProzessKey` aus `appsettings.json`: `Process_Genehmigung` mit der Vorlage, euer eigener Key mit eurem Projekt. Auf der Folie steht an dieser Stelle `"mm-genehmigung"`.
 - `betrag` kommt je nach Weg verschieden an: aus dem easyForm als Text, etwa `"1234.5"`, immer mit Punkt, per REST und im Prozesstest als Zahl (`long`). Der Handler muss beides lesen, Schritt 1 zeigt wie.
+- Für den Prozesstest in Java (Schritt 5) braucht ihr JDK 21 (`java -version`). Habt ihr im Ordner `java-prozesstest/` noch nie `./mvnw test` laufen lassen (Windows: `.\mvnw.cmd test`), startet es gleich zu Beginn in einem zweiten Terminal. Der erste Lauf lädt Maven und die Bibliotheken, rund 55 MB.
 
 ## Ausgangslage
 
@@ -29,14 +30,24 @@ Im Startstand tragen diese Dateien Kommentare `TODO Kapitel 12, Schritt ...`. Si
 | 3 | `src/GenehmigungWorker/Fachsystem/BuchungssystemSimulation.cs` | `Verbuchen` wirft `NotImplementedException` |
 | 3 | `src/GenehmigungWorker/Program.cs` | Skeleton-Schleife aus Kapitel 11 |
 | 4 | `tests/GenehmigungWorker.Tests/GenehmigungsworkflowTests.cs` | Prozesstest und Gegenprobe mit `Skip` |
+| 5 | `java-prozesstest/src/test/java/io/miragon/schulung/genehmigung/GenehmigungsworkflowTest.java` | Happy Path fertig, Ablehnung, Nachbesserung und Timer mit `@Disabled` |
 
 Fertig vorgegeben sind `Fachsystem/IBuchungssystem.cs` (die Signatur von `Verbuchen`), `ExternalTaskClient.cs` aus Kapitel 11 und der Test-Helfer `tests/GenehmigungWorker.Tests/EngineHelfer.cs`, im Prozesstest `_engine`. Alle TODOs findet ihr in VS Code mit Strg+Umschalt+F (macOS: Cmd+Umschalt+F) und dem Suchtext `TODO Kapitel 12`.
 
-`dotnet test` meldet im Startstand 3 übersprungene Tests und keinen Fehler.
+`dotnet test` meldet im Startstand 3 übersprungene Tests und keinen Fehler. `./mvnw test` im Ordner `java-prozesstest/` meldet 1 bestandenen und 3 übersprungene Tests.
 
 ## Das macht ihr
 
-Die Reihenfolge folgt der Empfehlung aus dem Kapitel: zuerst Handler und Unit-Test, die ohne Engine laufen, dann die Schleife, dann der Prozesstest, zum Schluss der Lauf über das Formular. Die Folien ab „Der Handler“ sind eure Hilfestellung.
+Die Reihenfolge folgt der Empfehlung aus dem Kapitel: zuerst Handler und Unit-Test, die ohne Engine laufen, dann die Schleife, dann die Prozesstests in C# und in Java, zum Schluss der Lauf über das Formular. Die Folien ab „Der Handler“ sind eure Hilfestellung.
+
+| Zeit | Minuten | Schritt |
+|---|---|---|
+| 14:15 bis 14:35 | 20 | 1 bis 3: Handler, Fake und Unit-Test, Simulation und Worker-Schleife |
+| 14:35 bis 14:45 | 10 | 4: Prozesstest in C# |
+| 14:45 bis 15:05 | 20 | 5: Prozesstest in Java, Ablehnung und Nachbesserung. Den Timer schreibt, wer schneller ist |
+| 15:05 bis 15:15 | 10 | 6: End-to-end über das Formular |
+
+Hängt ihr hinterher, lasst ihr zuerst den Timer weg und geht spätestens um 15:05 Uhr zu Schritt 6. Die Boni sind für alle, die vor der Zeit fertig sind.
 
 ### 1. Handler schreiben
 
@@ -87,7 +98,7 @@ dotnet run --project src/GenehmigungWorker
 
 Warten noch Anträge aus Kapitel 11 am Service Task, verbucht er sie gleich beim Start. Im Log steht eure Buchung, und der Task taucht nicht mehr alle 30 Sekunden wieder auf.
 
-### 4. Prozesstest
+### 4. Prozesstest in C#
 
 Datei `tests/GenehmigungWorker.Tests/GenehmigungsworkflowTests.cs`, Folien „Prozesstest in fünf Schritten“ und „Prozesstest in C#“.
 
@@ -103,7 +114,109 @@ Erwartet: Unit-Test und Prozesstest bestanden, keiner fehlgeschlagen. Die Gegenp
 
 Der Prozesstest braucht, was auch der Worker braucht: laufenden Stack, bereitgestelltes Modell, Zugangsdaten. Er liest dieselbe Konfiguration, auch dieselben User Secrets. Jeder Lauf startet eine eigene Instanz mit Business Key `prozesstest-...` und räumt am Ende auf.
 
-### 5. End-to-end über das Formular
+### 5. Prozesstest in Java
+
+Ordner `java-prozesstest/`, Datei `src/test/java/io/miragon/schulung/genehmigung/GenehmigungsworkflowTest.java`, Folien „Ein Testfall in fünf Schritten“ und „Was ein Prozesstest prüft“ aus Kapitel 10. Mehr zum Projekt steht in seiner [README](../java-prozesstest/README.md).
+
+**Ziel.** Derselbe Prozess, ein anderer Testaufbau: Der Prozesstest in C# spricht per REST mit eurer laufenden Engine. Der Test in Java startet die Engine selbst, im Speicher, und deployt für jeden Testfall die Kopie der Vorlage aus `src/main/resources/`. Er spielt Antragsteller:in, genehmigende Stelle und Worker und fragt die Engine, wo die Instanz wartet, welchen Pfad sie genommen hat und welche Variablen gesetzt sind. Stack und Worker braucht er nicht, ein Lauf dauert wenige Sekunden. Der Happy Path ist fertig, ihr schreibt Ablehnung und Nachbesserung, wer schneller ist, auch den Timer.
+
+**Voraussetzung.** JDK 21 oder neuer, `java -version` zeigt die Version. Maven braucht ihr nicht, der Maven Wrapper (`mvnw`) lädt es beim ersten Lauf.
+
+**Befehle.** Vom Repo-Root aus:
+
+```bash
+# macOS, Linux, Git Bash
+cd java-prozesstest
+./mvnw test
+```
+
+```powershell
+# Windows PowerShell
+cd java-prozesstest
+.\mvnw.cmd test
+```
+
+Ab dem zweiten Lauf geht es auch ohne Netz: `./mvnw -o test`, in PowerShell `.\mvnw.cmd -o test`. Zurück in den Repo-Root kommt ihr mit `cd ..`. Zeigt die Windows-Konsole Fragezeichen statt ✔ und ✘, hilft vorher `chcp 65001`.
+
+Im Startstand läuft nur der Happy Path. Die anderen drei Tests überspringt JUnit, der Baum zeigt `↷` und den Grund aus `@Disabled`:
+
+```
+── Genehmigungsworkflow - 1.1 s
+   ├─ ✔ Happy Path: Antrag genehmigt und verbucht - 0.21 s
+   ├─ ↷ Ablehnung: „Ablehnung mitteilen“, nie verbuchen (TODO Kapitel 12, Schritt 5) - 0 s
+   ├─ ↷ Nachbesserung: zurück an die Antragsteller:in, danach wieder „Antrag prüfen“ (TODO Kapitel 12, Schritt 5) - 0 s
+   └─ ↷ Timer nach 3 Tagen: „Erinnerung senden“, Aufgabe bleibt offen (TODO Kapitel 12, Schritt 5, für alle, die schneller sind) - 0 s
+
+Results:
+
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 3
+```
+
+**Schritte.** Jede TODO-Methode sagt im Kommentar, was ihr startet, wo die Instanz wartet und was ihr prüft.
+
+1. Lest den Happy Path `genehmigterAntragWirdVerbucht`. Seine Kommentare nummerieren die fünf Schritte der Folie: Starten, Warten, Entscheiden, Verbuchen, Beenden. Jede Zeile mit `assertThat` ist eine Prüfung.
+2. **Ablehnung**, `abgelehnterAntragWirdMitgeteilt`: starten, „Antrag prüfen“ mit `entscheidung` gleich `abgelehnt` abschließen, Speicherpunkt anstoßen. Dann prüfen: Instanz beendet, `Task_Ablehnen` und `End_Abgelehnt` durchlaufen, `Task_Verbuchen` und `End_Genehmigt` nicht, `ablehnungMitgeteilt` ist `true`, `buchungsnummer` fehlt.
+3. **Nachbesserung**, `nachbesserungFuehrtZurueckZurPruefung`: mit `nachbessern` abschließen, Speicherpunkt anstoßen. Jetzt wartet `Task_Nachbessern`, zugewiesen an `anna`. Diese Aufgabe ohne Variablen abschließen, danach wartet die Instanz wieder bei `Task_Pruefen`.
+4. **Timer**, `timerSendetErinnerung`, für alle, die schneller sind: Den Timer-Job `Boundary_Timer` holen, seine Fälligkeit prüfen (in drei Tagen, auf eine Minute genau) und ihn ausführen, statt drei Tage zu warten. Danach wartet die Instanz weiter bei `Task_Pruefen`, `Task_Erinnern` und `End_Erinnert` sind durchlaufen, `erinnerungGesendet` ist `true`.
+5. Ist ein Test fertig, löscht ihr die Zeile `@Disabled(...)` über ihm und startet `./mvnw test`. Löscht sie erst, wenn der Test etwas prüft: Eine leere Methode ohne `@Disabled` läuft grün durch und belegt nichts.
+
+**Hilfsmethoden.** Am Ende der Klasse stehen zwei Methoden, die ihr in jedem Test nutzt:
+
+- `antragStarten()` startet `Process_Genehmigung` wie das Startformular, mit `betrag`, `begruendung` und `antragsteller` gleich `anna` (Konstante `ANTRAGSTELLER`), Business Key `Antrag-1`.
+- `speicherpunktAnstossen(antrag, "StartEvent_Antrag")` prüft, dass die Instanz genau am Speicherpunkt hinter diesem Element steht, und führt ihn aus.
+
+**Speicherpunkte.** Der Baustein „CIB easyForm“ setzt hinter „Antrag eingereicht“ (`StartEvent_Antrag`) und hinter „Antrag prüfen“ (`Task_Pruefen`) je einen Speicherpunkt (`camunda:asyncAfter`). Im laufenden System führt sie der Job Executor der Engine kurz danach aus, die Engine im Test hat keinen. Deshalb stoßt ihr sie selbst an: nach dem Start `speicherpunktAnstossen(antrag, "StartEvent_Antrag")`, nach dem Abschließen von „Antrag prüfen“ `speicherpunktAnstossen(antrag, "Task_Pruefen")`. Erst dann entscheidet das Gateway. „Antrag nachbessern“ hat keinen Speicherpunkt, nach dem Abschließen wartet die Instanz sofort wieder bei „Antrag prüfen“. Den Timer führt ihr genauso selbst aus, mit `execute(...)`.
+
+**Die Aufrufe**, alle schon importiert:
+
+| Aufruf | Was er tut |
+|---|---|
+| `assertThat(antrag).isWaitingAtExactly("Task_Pruefen")` | Wartezustand: Die Instanz wartet genau dort und nirgends sonst |
+| `complete(task(), withVariables("entscheidung", "abgelehnt"))` | schließt die offene Aufgabe ab wie die genehmigende Stelle, `complete(task())` ohne Variablen |
+| `assertThat(antrag).task().isAssignedTo(ANTRAGSTELLER)` | prüft, wem die offene Aufgabe gehört |
+| `assertThat(antrag).isEnded().hasPassed(...).hasNotPassed(...)` | Pfad: beendet, durchlaufen, nicht durchlaufen, je mit einer oder mehreren IDs |
+| `assertThat(antrag).variables().containsEntry("ablehnungMitgeteilt", true)` | Variablen, `doesNotContainKey("buchungsnummer")` für eine, die fehlen muss |
+| `Job timer = job("Boundary_Timer", antrag);` und `execute(timer);` | holt den Timer-Job und führt ihn aus, `timer.getDuedate()` ist seine Fälligkeit |
+
+Nehmt immer die IDs aus dem Modell, etwa `Task_Ablehnen`, nie die Beschriftung „Ablehnung mitteilen“.
+
+Fertig seid ihr, wenn der Baum viermal ✔ zeigt und darunter `Tests run: 4, Failures: 0, Errors: 0, Skipped: 0` steht, ohne Timer `Skipped: 1`.
+
+**Typische Meldungen.** Unter dem Baum steht im Block „Results“ je rotem Test eine Zeile: Klasse, Methode, Zeilennummer und die Meldung.
+
+| Was ihr seht | Woran es liegt, was ihr tut |
+|---|---|
+| `↷` vor eurem Test, `Skipped` zählt ihn noch | `@Disabled` steht noch über der Methode. |
+| `to be waiting at exactly [Task_Pruefen], but it is actually waiting at [StartEvent_Antrag]` | Der Speicherpunkt nach dem Start fehlt: `speicherpunktAnstossen(antrag, "StartEvent_Antrag")`. Allgemein nennt `actually waiting at [...]` die Stelle, an der die Instanz wirklich wartet. |
+| `to be ended, but it is not!` | Nach dem Abschließen von „Antrag prüfen“ fehlt `speicherpunktAnstossen(antrag, "Task_Pruefen")`, das Gateway hat noch nicht entschieden. |
+| `ENGINE-02004 No outgoing sequence flow for the element with id 'Gateway_Entscheidung' could be selected for continuing the process.` | Kein Pfeil passt zur `entscheidung`. Die Werte heißen genau `genehmigt`, `abgelehnt` und `nachbessern`, kleingeschrieben. |
+| `Illegal call of execute(job = 'null') - must not be null!` | Diesen Job gibt es gerade nicht, etwa `speicherpunktAnstossen(antrag, "Task_Pruefen")`, bevor ihr die Aufgabe abgeschlossen habt. |
+| `Cannot invoke "org.cibseven.bpm.engine.runtime.Job.getDuedate()" because "timer" is null` | Den Timer gibt es erst, wenn die Instanz bei „Antrag prüfen“ wartet. Stoßt vorher den Speicherpunkt nach dem Start an. |
+| `Illegal call of complete(task = 'null') - must not be null!` | Es wartet keine Aufgabe. Prüft vorher mit `isWaitingAtExactly`, wo die Instanz steht. |
+| `Call a process instance assertion first - e.g. assertThat(processInstance)... !` | `task()` weiß nicht, welche Instanz gemeint ist. Ruft vorher `assertThat(antrag)` auf, `speicherpunktAnstossen` tut das auch. |
+| `to have passed activities [Ablehnung mitteilen] at least once, but actually we found that it passed [StartEvent_Antrag, Task_Pruefen, Gateway_Entscheidung, Task_Ablehnen, End_Abgelehnt]` | Beschriftung statt ID. Die Liste dahinter zeigt die IDs des Pfads, den die Instanz genommen hat. |
+| `["ablehnungMitgeteilt"=true (expected: "true")]` | Text statt Wahrheitswert: `true`, nicht `"true"`. |
+| `to be unfinished, but found that it already finished!` | Die Instanz ist schon zu Ende, der Test fragt aber nach einem Wartezustand. Nach der Ablehnung prüft ihr `isEnded()`. |
+| `COMPILATION ERROR` mit Datei und `[Zeile,Spalte]`, etwa `';' erwartet` (englisch: `';' expected`) | Java-Syntax an dieser Stelle: Semikolon, Klammer oder Anführungszeichen fehlt. |
+| `Fatal error compiling: error: release version 21 not supported` | Maven läuft mit einem älteren JDK. `java -version` muss 21 oder neuer zeigen, sonst setzt ihr `JAVA_HOME` auf das JDK 21. |
+| `The JAVA_HOME environment variable is not defined correctly` | Maven findet kein JDK. JDK 21 installieren oder `JAVA_HOME` auf sein Verzeichnis setzen, dann ein neues Terminal öffnen. |
+
+#### Bonus: Fehlerpfad in Java
+
+Für alle, die schneller fertig sind. Ihr testet die Variante mit dem fachlichen Fehler, `verbuchen-fehlerpfad.bpmn`. Sie liegt schon in `src/main/resources/`, als Kopie von `prozess/varianten/verbuchen-fehlerpfad.bpmn`, Process ID `Process_VerbuchenFehlerpfad`. Was die Variante tut, steht im [Bonus: Fachlicher Fehler](#bonus-fachlicher-fehler). Den C#-Bonus braucht ihr dafür nicht, der Test spielt den Worker selbst.
+
+1. Legt neben `GenehmigungsworkflowTest.java` die Klasse `FehlerpfadTest.java` an, mit denselben Annotationen, aber `@Deployment(resources = "verbuchen-fehlerpfad.bpmn")`.
+2. **Starten:** `runtimeService().startProcessInstanceByKey("Process_VerbuchenFehlerpfad", withVariables("antragsteller", "anna", "betrag", 60000, "begruendung", "Neue Serverhardware"))`. Die Variante hat keinen Speicherpunkt, die Instanz wartet sofort bei `Task_Verbuchen`.
+3. **Holen wie der Worker:** `List<LockedExternalTask> tasks = fetchAndLock("genehmigung-verbuchen", "prozesstest", 1);`
+4. **Ablehnen wie der Worker:** `externalTaskService().handleBpmnError(tasks.get(0).getId(), "prozesstest", "BUCHUNG_ABGELEHNT", "Budget der Kostenstelle reicht nicht")`. Antworten darf nur, wer den Task gesperrt hat, deshalb zuerst `fetchAndLock`.
+5. **Prüfen:** Die Instanz wartet genau bei `Task_BuchungKlaeren` mit der Kandidatengruppe `genehmiger`, `errorCode` ist `BUCHUNG_ABGELEHNT`, `errorMessage` euer Grund, `Task_GenehmigungMitteilen` ist nicht durchlaufen.
+6. **Gegenprobe** als zweiter Test: mit `betrag` 1200 starten, den geholten Task mit `complete(tasks.get(0), withVariables("buchungsnummer", "B-2026-0001"))` abschließen. Dann ist die Instanz beendet, `Task_GenehmigungMitteilen` und `End_Genehmigt` sind durchlaufen, `Task_BuchungKlaeren` nicht, und `genehmigungMitgeteilt` ist `true`.
+
+Neu zu importieren sind `fetchAndLock` und `externalTaskService`, statisch aus `BpmnAwareTests` wie die anderen, dazu `java.util.List` und `org.cibseven.bpm.engine.externaltask.LockedExternalTask`.
+
+Stimmt der errorCode nicht, fängt kein Error-Boundary den Fehler, und die Engine beendet die Instanz still. Der Test meldet dann `to be unfinished, but found that it already finished!`, genau wie die Vorlage im laufenden System eine abgelehnte Buchung ohne Vorfall beendet.
+
+### 6. End-to-end über das Formular
 
 Folie „End-to-end: vom Formular bis zum Worker“.
 
@@ -132,7 +245,8 @@ Die erste Antwort nennt je Instanz `processInstanceId` und `value` der `buchungs
 
 - [ ] Ein Antrag aus dem Startformular endet bei „Antrag genehmigt“: Im Cockpit ist die Instanz abgeschlossen, und `End_Genehmigt` taucht für sie in der History auf.
 - [ ] `buchungsnummer` steht in den Variablen der Instanz.
-- [ ] Unit-Test und Prozesstest laufen grün: `dotnet test` meldet keinen Fehler.
+- [ ] Unit-Test und Prozesstest in C# laufen grün: `dotnet test` meldet keinen Fehler.
+- [ ] Der Prozesstest in Java läuft grün: `./mvnw test` im Ordner `java-prozesstest/` meldet `Failures: 0, Errors: 0`, übersprungen ist höchstens der Timer.
 
 ## Hinweise
 
@@ -141,7 +255,7 @@ Die erste Antwort nennt je Instanz `processInstanceId` und `value` der `buchungs
 - `failure`: Beim ersten Fehler ist `Retries` null, der Worker meldet 3 verbleibende Versuche, danach zählt er herunter. Dazwischen liegen fünf Minuten, bei 0 legt die Engine einen Incident an. Wie viele Versuche übrig sind und warum es scheiterte, zeigt `curl -u worker:worker "http://localhost:8080/engine-rest/external-task?topicName=genehmigung-verbuchen"` (PowerShell: `curl.exe`) in `retries` und `errorMessage`, Incidents seht ihr im Cockpit unter „Vorfälle“.
 - Idempotenz: Scheitert `CompleteAsync` nach einer erfolgreichen Buchung, läuft der `catch`, der Task kommt erneut, und der Handler bucht ein zweites Mal. Dagegen hilft nur ein Fachsystem, das den Schlüssel kennt. Genau das baut ihr im Bonus.
 - Habt ihr den Worker eben erst gestoppt, kann der Prozesstest rund 30 Sekunden brauchen. Die letzte Long-Polling-Anfrage des Workers bleibt in der Engine noch bis zu zehn Sekunden offen und kann den Task des Tests holen. Dann gehört er für 30 Sekunden dem gestoppten Worker. Der Test-Helfer fragt deshalb bis zu 45 Sekunden lang nach.
-- Die Tests im Startstand stehen auf `Skip`, damit `dotnet test` von Anfang an sauber durchläuft. Ein übersprungener Test ist kein grüner Test.
+- Die Tests im Startstand stehen in C# auf `Skip` und in Java auf `@Disabled`, damit `dotnet test` und `./mvnw test` von Anfang an sauber durchlaufen. Ein übersprungener Test ist kein grüner Test.
 
 ## Typische Stolpersteine
 
@@ -155,13 +269,14 @@ Die erste Antwort nennt je Instanz `processInstanceId` und `value` der `buchungs
 | `InvalidCastException` bei `antragsteller` oder `begruendung` | Die Variable ist kein Text. `(string)` setzt Text voraus. |
 | Die Buchung hat den zehn- oder hundertfachen Betrag, etwa `123450` statt `1234.50` (Musterlösung: `123.450,00 Euro` statt `1.234,50 Euro`), im Cockpit steht `betrag` aber richtig | `betrag` kam als Text aus dem easyForm, und der Handler liest ihn mit deutscher Kultur. Schritt 1, `CultureInfo.InvariantCulture`. |
 | Im Cockpit steht `betrag` schon falsch, etwa `123450` statt `1234.50`, oder die Instanz aus dem Formular endet ohne `buchungsnummer` | Ihr habt den Betrag in einem Browser mit englischer Spracheinstellung mit Komma eingegeben, das Zahlenfeld hat das Komma verschluckt. Schreibt ihn dort mit Punkt, siehe [Kapitel 11, Schritt 8](kapitel-11-lokales-setup.md#8-antrag-stellen-und-genehmigen). Über 50.000 Euro lehnt die Simulation der Musterlösung ab, und die Vorlage beendet die Instanz dann still, siehe Bonus fachlicher Fehler. |
-| Prozesstest: `Kein External Task auf Topic ... auch nicht nach 45 Sekunden` | Euer Worker läuft noch und hat den Task schon verbucht. Stoppt ihn. Oder die Instanz steht gar nicht am Service Task, dann stimmen Entscheidung oder Modell nicht. |
-| Prozesstest: `lieferte 404 NotFound` beim Start, mit der Frage, ob das Modell bereitgestellt ist | Modell nicht bereitgestellt (Projekt-ZIP importieren, [Kapitel 11, Schritt 4](kapitel-11-lokales-setup.md#4-projekt-importieren)), oder `ProzessKey` passt nicht zur Process ID des Modells. |
-| Prozesstest: `Die Engine unter http://localhost:8080/ antwortet nicht` | Der Stack läuft nicht oder startet noch. Im Ordner `stack/`: `docker compose up -d`, dann warten, bis `docker compose logs init` mit `[init] Fertig.` endet. |
-| Prozesstest: `Zugangsdaten für die Engine fehlen` | Im Terminal fehlen die Umgebungsvariablen. Setzt sie oder nehmt User Secrets ([Kapitel 11, Schritt 6](kapitel-11-lokales-setup.md#6-appsettingsjson-prüfen-und-zugangsdaten-setzen)). |
-| Prozesstest: `lieferte 401 Unauthorized` | Benutzer oder Passwort falsch. `dotnet user-secrets list --project src/GenehmigungWorker` zeigt, was gesetzt ist. |
+| Prozesstest in C#: `Kein External Task auf Topic ... auch nicht nach 45 Sekunden` | Euer Worker läuft noch und hat den Task schon verbucht. Stoppt ihn. Oder die Instanz steht gar nicht am Service Task, dann stimmen Entscheidung oder Modell nicht. |
+| Prozesstest in C#: `lieferte 404 NotFound` beim Start, mit der Frage, ob das Modell bereitgestellt ist | Modell nicht bereitgestellt (Projekt-ZIP importieren, [Kapitel 11, Schritt 4](kapitel-11-lokales-setup.md#4-projekt-importieren)), oder `ProzessKey` passt nicht zur Process ID des Modells. |
+| Prozesstest in C#: `Die Engine unter http://localhost:8080/ antwortet nicht` | Der Stack läuft nicht oder startet noch. Im Ordner `stack/`: `docker compose up -d`, dann warten, bis `docker compose logs init` mit `[init] Fertig.` endet. |
+| Prozesstest in C#: `Zugangsdaten für die Engine fehlen` | Im Terminal fehlen die Umgebungsvariablen. Setzt sie oder nehmt User Secrets ([Kapitel 11, Schritt 6](kapitel-11-lokales-setup.md#6-appsettingsjson-prüfen-und-zugangsdaten-setzen)). |
+| Prozesstest in C#: `lieferte 401 Unauthorized` | Benutzer oder Passwort falsch. `dotnet user-secrets list --project src/GenehmigungWorker` zeigt, was gesetzt ist. |
 | `dotnet test` meldet euren fertigen Test als übersprungen | `Skip` steht noch am `[Fact]`. |
 | Die Instanz hängt am Service Task „Genehmigung verbuchen“ | In dieser Reihenfolge prüfen: Schreibweise des Topics in Modell und `appsettings.json`, `EngineUrl`, Lock (ein abgestürzter Worker hält ihn bis zu 30 Sekunden), `failure` mit fünf Minuten Pause. |
+| Eine Meldung aus dem Prozesstest in Java | Die häufigen stehen in [Schritt 5 unter „Typische Meldungen“](#5-prozesstest-in-java). |
 
 ## Bonus: Idempotenz
 
@@ -216,7 +331,7 @@ Warum die Variante? Mit 60.000 Euro aus dem Startformular kommt auch die Vorlage
 
 ## Musterlösung
 
-`loesung/` enthält die fertigen Fassungen aller Dateien, die sich gegenüber dem Startstand ändern oder neu dazukommen, unter denselben Pfaden:
+`loesung/` enthält die fertigen Fassungen aller Dateien, die sich gegenüber dem Startstand ändern oder neu dazukommen, unter denselben Pfaden, für Java unter `loesung/java-prozesstest/`:
 
 | Datei | Was die Musterlösung macht |
 |---|---|
@@ -230,11 +345,14 @@ Warum die Variante? Mit 60.000 Euro aus dem Startformular kommt auch die Vorlage
 | `loesung/tests/GenehmigungWorker.Tests/ExternalTaskClientTests.cs` | neu: `BpmnErrorAsync` schickt Pfad und Body, ohne Engine |
 | `loesung/tests/GenehmigungWorker.Tests/GenehmigungsworkflowTests.cs` | Prozesstest der Folie und Gegenprobe mit `abgelehnt` |
 | `loesung/tests/GenehmigungWorker.Tests/FehlerpfadTests.cs` | neu: Prozesstest gegen die Variante, deployt sie selbst und prüft „Buchung klären“ mit `errorCode` und `errorMessage` |
+| `loesung/java-prozesstest/src/test/java/io/miragon/schulung/genehmigung/GenehmigungsworkflowTest.java` | alle vier Testfälle: Happy Path, Ablehnung, Nachbesserung, Timer |
+| `loesung/java-prozesstest/src/test/java/io/miragon/schulung/genehmigung/FehlerpfadTest.java` | neu, Bonus: Prozesstest gegen die Variante, `bpmnError` mit `BUCHUNG_ABGELEHNT` führt zu „Buchung klären“, Gegenprobe mit `complete` endet bei „Antrag genehmigt“ |
 
 **Vergleichen:** In VS Code beide Dateien im Explorer markieren, Rechtsklick, „Ausgewählte vergleichen“. Oder im Terminal, bash und PowerShell gleich:
 
 ```bash
 git diff --no-index src/GenehmigungWorker/Program.cs loesung/src/GenehmigungWorker/Program.cs
+git diff --no-index java-prozesstest/src/test loesung/java-prozesstest/src/test
 ```
 
 **Übernehmen:** Im Repo-Root kopiert ihr die Musterlösung über den Startstand. Das überschreibt eure Fassungen dieser Dateien, sichert oder committet sie vorher.
@@ -242,11 +360,13 @@ git diff --no-index src/GenehmigungWorker/Program.cs loesung/src/GenehmigungWork
 ```bash
 # bash, zsh, Git Bash
 cp -R loesung/src loesung/tests .
+cp -R loesung/java-prozesstest/src java-prozesstest/
 ```
 
 ```powershell
 # PowerShell
 Copy-Item -Path loesung\src, loesung\tests -Destination . -Recurse -Force
+Copy-Item -Path loesung\java-prozesstest\src -Destination java-prozesstest -Recurse -Force
 ```
 
 Einzelne Dateien übernehmt ihr genauso, etwa `cp loesung/src/GenehmigungWorker/Program.cs src/GenehmigungWorker/` (PowerShell: `Copy-Item loesung\src\GenehmigungWorker\Program.cs src\GenehmigungWorker\`). Achtet dabei auf Paare, die zusammengehören:
@@ -254,10 +374,11 @@ Einzelne Dateien übernehmt ihr genauso, etwa `cp loesung/src/GenehmigungWorker/
 - `Program.cs` ruft den Konstruktor der Simulation mit Dateipfad auf, fängt `BuchungAbgelehntException` und ruft `BpmnErrorAsync`. Übernehmt `BuchungssystemSimulation.cs`, `Fachsystem/BuchungAbgelehntException.cs` und `ExternalTaskClient.cs` mit.
 - `GenehmigungVerbuchenHandlerTests.cs` braucht den Fake der Musterlösung (`Aufrufe`), ihre Simulation und die Exception.
 - `ExternalTaskClientTests.cs` braucht den `ExternalTaskClient` der Musterlösung, `FehlerpfadTests.cs` dazu Simulation und Exception.
+- Die beiden Java-Dateien stehen jede für sich. `FehlerpfadTest.java` braucht nur die Kopie der Variante, die schon im Startstand liegt.
 
-Mit der Musterlösung laufen `dotnet test --filter "Kategorie!=Prozesstest"` ohne Engine (9 Tests) und `dotnet test` mit laufendem Stack und bereitgestelltem Modell (12 Tests) grün. Die Variante für den Prozesstest zum fachlichen Fehler deployt der Test selbst. Genau das prüft auch die GitHub Action des Repos bei jedem Push.
+Mit der Musterlösung laufen `dotnet test --filter "Kategorie!=Prozesstest"` ohne Engine (9 Tests) und `dotnet test` mit laufendem Stack und bereitgestelltem Modell (12 Tests) grün. Die Variante für den Prozesstest zum fachlichen Fehler deployt der Test selbst. In `java-prozesstest/` meldet `./mvnw test` 6 bestandene Tests, die vier des Genehmigungsworkflows und die zwei des Fehlerpfads. Genau das prüft auch die GitHub Action des Repos bei jedem Push.
 
-Zurück zum Startstand kommt ihr mit `git restore src tests` und `git clean -fd src tests`, in bash und PowerShell gleich. Das verwirft alle eure Änderungen in diesen Ordnern und löscht Dateien, die dort neu dazugekommen sind, auch eure eigenen. Ohne `git clean` bleiben etwa `ExternalTaskClientTests.cs` und `FehlerpfadTests.cs` aus der Musterlösung liegen, und der Startstand baut nicht mehr.
+Zurück zum Startstand kommt ihr mit `git restore src tests java-prozesstest` und `git clean -fd src tests java-prozesstest`, in bash und PowerShell gleich. Das verwirft alle eure Änderungen in diesen Ordnern und löscht Dateien, die dort neu dazugekommen sind, auch eure eigenen. Ohne `git clean` bleiben etwa `ExternalTaskClientTests.cs` und `FehlerpfadTests.cs` aus der Musterlösung liegen, und der Startstand baut nicht mehr. In Java bliebe `FehlerpfadTest.java` liegen und liefe weiter mit. Die Build-Ausgaben unter `bin/`, `obj/` und `target/` lässt `git clean` stehen, Git ignoriert sie.
 
 Der Worker der Musterlösung loggt jeden Task:
 
@@ -294,6 +415,14 @@ tests/GenehmigungWorker.Tests/
 ├── BuchungssystemFake.cs                # Fake statt Fachsystem
 ├── GenehmigungsworkflowTests.cs         # Prozesstest per REST gegen eure lokale Engine
 └── EngineHelfer.cs                      # Test-Helfer für den Prozesstest, fertig vorgegeben
+java-prozesstest/
+├── pom.xml                              # Engine im Speicher, cibseven-bpm-junit5, cibseven-bpm-assert
+├── mvnw, mvnw.cmd                       # Maven Wrapper, lädt Maven beim ersten Lauf
+├── src/main/resources/
+│   ├── genehmigungsworkflow.bpmn        # Kopie der Vorlage, byte-gleich
+│   └── verbuchen-fehlerpfad.bpmn        # Kopie der Variante für den Bonus, byte-gleich
+└── src/test/java/io/miragon/schulung/genehmigung/
+    └── GenehmigungsworkflowTest.java    # Prozesstest mit der Engine im Speicher
 ```
 
 ### Tests
@@ -304,12 +433,16 @@ dotnet test --filter "Kategorie!=Prozesstest"             # nur die Unit-Tests, 
 dotnet test --filter "Kategorie=Prozesstest"              # nur die Prozesstests
 ```
 
+Den Prozesstest in Java startet ihr im Ordner `java-prozesstest/` mit `./mvnw test`, in PowerShell mit `.\mvnw.cmd test`.
+
 Die Unit-Tests brauchen weder Engine noch Zugangsdaten und laufen in Millisekunden. Die Prozesstests tragen `[Trait("Kategorie", "Prozesstest")]` und laufen per REST gegen die lokale Engine: Der Stack muss laufen, das Modell bereitgestellt, die Zugangsdaten gesetzt (dieselben wie für den Worker, auch als User Secrets) und euer Worker gestoppt sein. Jeder Test startet eine eigene Instanz mit Business Key `prozesstest-...`, holt den External Task mit Filter auf diesen Business Key unter der Worker-ID `prozesstest` und löscht am Ende, was von seinen Instanzen noch offen ist. Läuft die Engine nicht, fehlt das Modell oder stimmen die Zugangsdaten nicht, nennt die Fehlermeldung des Tests die Ursache und den nächsten Schritt.
 
-| Stand | `dotnet test --filter "Kategorie!=Prozesstest"` | `dotnet test` mit laufendem Stack |
-|---|---|---|
-| Startstand | 1 übersprungen | 3 übersprungen |
-| Musterlösung | 9 bestanden | 12 bestanden |
+| Stand | `dotnet test --filter "Kategorie!=Prozesstest"` | `dotnet test` mit laufendem Stack | `./mvnw test` in `java-prozesstest/` |
+|---|---|---|---|
+| Startstand | 1 übersprungen | 3 übersprungen | 1 bestanden, 3 übersprungen |
+| Musterlösung | 9 bestanden | 12 bestanden | 6 bestanden |
+
+Der Prozesstest in Java braucht weder Stack noch Zugangsdaten noch einen gestoppten Worker: `cibseven-bpm-junit5` startet für die Testklasse eine Engine mit H2 im Speicher und deployt für jeden Testfall die Kopie des Modells aus `src/main/resources/`. Einen Job Executor hat diese Engine nicht, Speicherpunkte und Timer stößt der Test selbst an.
 
 Den Test-Helfer `EngineHelfer.cs` (im Test `_engine`) bekommt ihr fertig: je Methode ein REST-Endpunkt, etwa `StartAsync`, `GetTaskAsync`, `CompleteTaskAsync`, `FetchAndLockAsync`, `CompleteAsync`, `GetHistoryAsync`, `GetVariableAsync` und für die Gegenprobe `GetExternalTasksAsync`. Die lesenden Methoden warten auf den Zustand, statt nur einmal zu fragen: `GetTaskAsync` fragt bis zu zehn Sekunden lang nach, bis die Aufgabe da ist. `GetHistoryAsync`, `GetVariableAsync` und `GetExternalTasksAsync` warten vorher, bis an der Instanz kein Speicherpunkt mehr aussteht. Das braucht die Vorlage: Der easyForm-Baustein setzt nach dem Start-Event und nach „Antrag prüfen“ je einen Speicherpunkt, die Engine antwortet dort schon, und den Rest führt ihr Job Executor kurz danach im Hintergrund aus. Kommt der Zustand nicht, nennt die Fehlermeldung, was erwartet war und wo die Instanz steht. `FetchAndLockAsync` fragt bis zu 45 Sekunden lang nach, statt nach einem leeren fetchAndLock sofort aufzugeben: Die letzte Long-Polling-Anfrage eines eben gestoppten Workers bleibt in der Engine bis zu zehn Sekunden offen und kann den Task des Tests noch für 30 Sekunden sperren.
 
@@ -321,8 +454,8 @@ Den Test-Helfer `EngineHelfer.cs` (im Test `_engine`) bekommt ihr fertig: je Met
 - `betrag` liest der Handler der Musterlösung als Text mit `decimal.Parse` und als Zahl mit `Convert.ToDecimal`, beides mit `CultureInfo.InvariantCulture`. Das easyForm speichert auch ein Feld vom Typ „Zahl“ als Text.
 - `CompleteAsync` schickt die Werte typisiert: `string` als String, `int` als Integer, `long` als Long, `decimal` und `double` als Double, `bool` als Boolean.
 - `IBuchungssystem` und die Simulation liegen unter `Fachsystem/`, getrennt von den Handlern.
-- Der Prozesstest nimmt Prozess-Key und Topic aus der Konfiguration (`_engine.ProzessKey`, `_engine.Topic`). Auf der Folie stehen sie ausgeschrieben.
-- Die Tests im Startstand sind mit `Skip` markiert statt rot. So läuft `dotnet test` von Anfang an sauber durch, und ihr seht, welche Tests noch fehlen.
+- Der Prozesstest in C# nimmt Prozess-Key und Topic aus der Konfiguration (`_engine.ProzessKey`, `_engine.Topic`). Auf der Folie stehen sie ausgeschrieben.
+- Die Tests im Startstand sind mit `Skip` markiert statt rot, in Java mit `@Disabled`. So laufen `dotnet test` und `./mvnw test` von Anfang an sauber durch, und ihr seht, welche Tests noch fehlen.
 - Die Prozesstests tragen den Trait `Kategorie=Prozesstest`. Damit trennt `--filter` sie von den Unit-Tests, etwa auf einem Rechner ohne Engine.
 - Die Simulation speichert ihre Buchungen in `buchungen.json` neben der DLL (`src/GenehmigungWorker/bin/Debug/net10.0/`). Den Pfad gibt `Program.cs` im Konstruktor mit und loggt ihn beim Start. So findet der Worker die Datei, egal wo ihr ihn startet, und sie landet nie im Repo. Löscht ihr die Datei, beginnen die Nummern wieder bei 0001. Gezählt wird je Kalenderjahr: B-2026-0001, B-2026-0002 und so weiter.
 - Die Simulation speichert die Buchung, bevor sie die Nummer zurückgibt. Stirbt der Worker zwischen Verbuchen und `complete`, bekommt der nächste Versuch dieselbe Nummer.
@@ -330,3 +463,6 @@ Den Test-Helfer `EngineHelfer.cs` (im Test `_engine`) bekommt ihr fertig: je Met
 - Der Unit-Test-Fake merkt sich seine Aufrufe. Damit prüft ein Test, dass der Handler ohne Business Key unter der Prozessinstanz-ID verbucht, wie beim Start über das Formular.
 - `deploy` mit Pfad spielt eine andere Datei ein, etwa eine Variante unter `prozess/varianten/`. Deployment und Ressource heißen dann wie die Datei, nicht wie der `ProzessKey` der Vorlage.
 - Für den Bonus fachlicher Fehler lehnt die Simulation der Musterlösung jede Buchung über 50.000 Euro ab (`BudgetJeBuchung`) und speichert sie nicht. Die Ablehnung ist eine eigene Exception unter `Fachsystem/`, `BuchungAbgelehntException`. Der Handler bleibt, wie er ist, erst die Schleife macht aus der Exception ein `bpmnError`. Die Beträge in Meldung und Log stehen immer im deutschen Format, egal wie der Rechner eingestellt ist.
+- Der Prozesstest in Java testet die Kopie der Vorlage in `java-prozesstest/src/main/resources/`, nicht euer Modell in der Engine. Die GitHub Action hält die Kopie byte-gleich zu `prozess/genehmigungsworkflow.bpmn`, ebenso die Kopie der Variante.
+- Übung und Demo teilen sich ein Java-Projekt. Für die Demo in Kapitel 10 übernimmt der Trainer die Musterlösung und setzt danach zurück, siehe [README des Projekts](../java-prozesstest/README.md#demo-kapitel-10-trainer).
+- Im Java-Bonus holt der Test den External Task selbst mit `fetchAndLock` und antwortet mit `handleBpmnError` oder `complete`, wie der Worker. Einen Handler oder Fake aus C# braucht er nicht.

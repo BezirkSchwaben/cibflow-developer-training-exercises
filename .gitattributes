@@ -15,7 +15,7 @@
 *.py          text eol=lf
 *.http        text eol=lf
 
-# Maven Wrapper der Java-Demo: Das Shell-Skript läuft auch unter Git Bash nur mit LF.
+# Maven Wrapper des Java-Prozesstests: Das Shell-Skript läuft auch unter Git Bash nur mit LF.
 mvnw          text eol=lf
 
 # Windows-Skripte brauchen CRLF.

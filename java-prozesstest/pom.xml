@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Demo zu Kapitel 10: Prozesstest für den Genehmigungsworkflow.
+  Prozesstest in Java für den Genehmigungsworkflow: Übung in Kapitel 12, Demo in Kapitel 10.
   Engine und Datenbank laufen im Speicher, ohne Server und ohne Spring Boot.
   Alle Läufe mit ./mvnw test (Windows: .\mvnw.cmd test), Anleitung in README.md.
   Maven selbst ist über .mvn/jvm.config leiser gestellt.
@@ -11,10 +11,10 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>io.miragon.schulung</groupId>
-  <artifactId>kapitel-10-prozesstest</artifactId>
+  <artifactId>java-prozesstest</artifactId>
   <version>1.0.0</version>
   <packaging>jar</packaging>
-  <name>Demo Kapitel 10: Prozesstest Genehmigungsworkflow</name>
+  <name>Prozesstest Genehmigungsworkflow</name>
 
   <properties>
     <!-- Voraussetzung der Schulung ist JDK 21, neuere JDKs bauen dasselbe -->

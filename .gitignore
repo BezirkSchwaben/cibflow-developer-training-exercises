@@ -4,12 +4,17 @@ obj/
 TestResults/
 *.user
 
-# Java-Build-Ausgaben (demo/kapitel-10-prozesstest-java)
+# Java-Build-Ausgaben (java-prozesstest)
 target/
 
 # IDEs
 .vs/
 .idea/
+# Projektdateien, die Java-Erweiterungen neben pom.xml anlegen können
+.classpath
+.project
+.settings/
+.factorypath
 
 # Lokale Zugangsdaten gehören nicht ins Repo
 .env
