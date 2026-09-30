@@ -26,6 +26,16 @@ Der erste Lauf lädt Maven und die Bibliotheken, rund 55 MB. Lasst ihn deshalb e
 
 Unter Windows können ✔, ✘, ↷ und „“ in der Konsole als Fragezeichen erscheinen. Dann vorher `chcp 65001` ausführen. Hilft das nicht, schaltet `.\mvnw.cmd test "-Dbaum.theme=ASCII"` den Baum auf `+--`, `[OK]`, `[XX]` und, für übersprungen, `[??]` um.
 
+## Hinter einem Proxy
+
+Der erste Lauf lädt alles von `repo.maven.apache.org`. Scheitert er mit `PKIX path building failed` oder `Could not transfer artifact`, sitzt ihr hinter einem Proxy, oder eure IT prüft verschlüsselte Verbindungen. .NET und Docker laufen dann oft trotzdem: Maven liest den Proxy nicht aus den Umgebungsvariablen, und Java prüft Zertifikate gegen eine eigene Liste, nicht gegen die des Betriebssystems.
+
+- **Proxy:** Tragt ihn in `~/.m2/settings.xml` ein, unter Windows `%USERPROFILE%\.m2\settings.xml`, so wie in [Configuring a proxy](https://maven.apache.org/guides/mini/guide-proxies.html) beschrieben. Adresse und Port kennt eure IT.
+- **`PKIX path building failed`:** Java kennt das Zertifikat nicht, mit dem eure IT die Verbindungen prüft. Fragt die IT nach dem Zertifikat und danach, wie es ins JDK kommt.
+- **Am schnellsten:** den ersten Lauf außerhalb des Behördennetzes starten, etwa über einen Hotspot. Danach liegt alles unter `~/.m2/`, und `./mvnw -o test` läuft ohne Netz.
+
+Klappt es bis zur Schulung nicht, schreibt ihr den Java-Teil zu zweit am Rechner eurer Nachbarn.
+
 ## Was drin ist
 
 - `src/main/resources/genehmigungsworkflow.bpmn`: Kopie der Vorlage `prozess/genehmigungsworkflow.bpmn`, dieselben IDs.
@@ -56,24 +66,26 @@ Results:
 Tests run: 4, Failures: 0, Errors: 0, Skipped: 3
 ```
 
+Maven setzt `[INFO]` vor jede Zeile, die Blöcke hier lassen das weg. Sind Tests übersprungen, steht `[WARNING]` vor `Tests run`. Das ist kein Fehler.
+
 Fertig seid ihr, wenn Ablehnung und Nachbesserung ein ✔ tragen und `Failures: 0, Errors: 0` dasteht. Mit Timer tragen alle vier Zeilen ein ✔, und es steht `Skipped: 0` da.
 
 ## Demo (Kapitel 10, Trainer)
 
-Die Live-Demo zu Kapitel 10 „Wie ein Prozesstest funktioniert“, Folie „Live: grün, geändert, rot“. Kein Übungsteil, niemand tippt mit. Die Demo braucht die Musterlösung: Im Startstand sind Ablehnung, Nachbesserung und Timer übersprungen, Variante B bliebe dann grün.
+Die Live-Demo zu Kapitel 10 „Wie ein Prozesstest funktioniert“, Folie „Live: grün, geändert, rot“. Kein Übungsteil, niemand tippt mit. Die Demo braucht den fertigen Test aus der Musterlösung: Im Startstand sind Ablehnung, Nachbesserung und Timer übersprungen, Variante B bliebe dann grün. Den Bonus `FehlerpfadTest.java` übernehmt ihr nicht, so laufen genau die vier Tests des Genehmigungsworkflows.
 
 ### Vorbereitung
 
-1. Musterlösung übernehmen, im Repo-Root:
+1. Den Test der Musterlösung übernehmen, im Repo-Root:
    ```bash
    # bash, zsh, Git Bash
-   cp -R loesung/java-prozesstest/src java-prozesstest/
+   cp loesung/java-prozesstest/src/test/java/io/miragon/schulung/genehmigung/GenehmigungsworkflowTest.java java-prozesstest/src/test/java/io/miragon/schulung/genehmigung/
    ```
    ```powershell
    # PowerShell
-   Copy-Item -Path loesung\java-prozesstest\src -Destination java-prozesstest -Recurse -Force
+   Copy-Item loesung\java-prozesstest\src\test\java\io\miragon\schulung\genehmigung\GenehmigungsworkflowTest.java java-prozesstest\src\test\java\io\miragon\schulung\genehmigung\
    ```
-   `git status` zeigt danach `GenehmigungsworkflowTest.java` als geändert und `FehlerpfadTest.java` als neu.
+   `git status` zeigt danach nur `GenehmigungsworkflowTest.java` als geändert.
 2. `cd java-prozesstest`, einmal `./mvnw test` laufen lassen und die Demo einmal durchspielen.
 
 Das Modell zeigt ihr in VS Code mit der Erweiterung Miragon BPMN Modeler, daneben das Terminal. Schrift groß, vor jedem Lauf `clear`. Geändert wird nur die Kopie in `src/main/resources/`, die Vorlage unter `prozess/` bleibt unberührt.
@@ -82,54 +94,48 @@ Das Modell zeigt ihr in VS Code mit der Erweiterung Miragon BPMN Modeler, danebe
 
 1. **Grün:** `./mvnw test`
    ```
-   ── Genehmigungsworkflow - 1.4 s
-      ├─ ✔ Happy Path: Antrag genehmigt und verbucht - 0.24 s
+   ── Genehmigungsworkflow - 1.2 s
+      ├─ ✔ Happy Path: Antrag genehmigt und verbucht - 0.20 s
       ├─ ✔ Ablehnung: „Ablehnung mitteilen“, nie verbuchen - 0.06 s
-      ├─ ✔ Nachbesserung: zurück an die Antragsteller:in, danach wieder „Antrag prüfen“ - 0.06 s
+      ├─ ✔ Nachbesserung: zurück an die Antragsteller:in, danach wieder „Antrag prüfen“ - 0.05 s
       └─ ✔ Timer nach 3 Tagen: „Erinnerung senden“, Aufgabe bleibt offen - 0.03 s
-   ── Fehlerpfad (Variante) - 0.07 s
-      ├─ ✔ Buchung abgelehnt: BPMN-Fehler BUCHUNG_ABGELEHNT, danach wartet „Buchung klären“ - 0.05 s
-      └─ ✔ Gegenprobe: verbucht, „Genehmigung mitteilen“, Ende bei „Antrag genehmigt“ - 0.02 s
 
    Results:
 
-   Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+   Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
    ```
-   Im Editor nur den Happy-Path-Test `genehmigterAntragWirdVerbucht` zeigen, die Imports einklappen. Seine Kommentare nummerieren die fünf Schritte der Folie. Der Block „Fehlerpfad (Variante)“ ist der Bonus aus Kapitel 12 und testet ein eigenes Modell.
-2. **Variante A, ID ändern:** „Antrag prüfen“ anklicken und im Properties-Panel die ID `Task_Pruefen` in `Task_Pruefen2` ändern, speichern. Der Modeler zieht die Verweise mit (Lane, Timer, Sequenzflüsse). Ohne Modeler im Texteditor mit Suchen und Ersetzen, Option „Nur ganzes Wort“. Den Test nicht anfassen. Ergebnis: alle vier Tests des Genehmigungsworkflows rot, denn jeder wartet bei „Antrag prüfen“. Der Fehlerpfad bleibt grün, sein Modell hat sich nicht geändert.
+   Im Editor nur den Happy-Path-Test `genehmigterAntragWirdVerbucht` zeigen, die Imports einklappen. Seine Kommentare nummerieren die fünf Schritte der Folie.
+2. **Variante A, ID ändern:** „Antrag prüfen“ anklicken und im Properties-Panel die ID `Task_Pruefen` in `Task_Pruefen2` ändern, speichern. Der Modeler zieht die Verweise mit (Lane, Timer, Sequenzflüsse). Ohne Modeler im Texteditor mit Suchen und Ersetzen, Option „Nur ganzes Wort“. Den Test nicht anfassen. Ergebnis: alle vier Tests rot, denn jeder wartet bei „Antrag prüfen“.
    ```
-   ── Genehmigungsworkflow - 1.2 s
+   ── Genehmigungsworkflow - 1.1 s
       ├─ ✘ Happy Path: Antrag genehmigt und verbucht - 0.16 s
       ├─ ✘ Ablehnung: „Ablehnung mitteilen“, nie verbuchen - 0.04 s
       ├─ ✘ Nachbesserung: zurück an die Antragsteller:in, danach wieder „Antrag prüfen“ - 0.04 s
-      └─ ✘ Timer nach 3 Tagen: „Erinnerung senden“, Aufgabe bleibt offen - 0.04 s
-   ── Fehlerpfad (Variante) - 0.09 s
-      ├─ ✔ Buchung abgelehnt: BPMN-Fehler BUCHUNG_ABGELEHNT, danach wartet „Buchung klären“ - 0.06 s
-      └─ ✔ Gegenprobe: verbucht, „Genehmigung mitteilen“, Ende bei „Antrag genehmigt“ - 0.03 s
+      └─ ✘ Timer nach 3 Tagen: „Erinnerung senden“, Aufgabe bleibt offen - 0.03 s
    ```
    Die Meldungen stehen unter dem Baum im Block „Results“, je Test eine Zeile, sortiert nach Methodenname. Der Happy Path heißt dort `genehmigterAntragWirdVerbucht` und steht an zweiter Stelle:
    ```
    GenehmigungsworkflowTest.genehmigterAntragWirdVerbucht:54 Expecting ProcessInstance {id='7', processDefinitionId='Process_Genehmigung:1:3', businessKey='Antrag-1'} to be waiting at exactly [Task_Pruefen], but it is actually waiting at [Task_Pruefen2].
    ```
-   Darunter steht `Tests run: 6, Failures: 4, Errors: 0, Skipped: 0`.
-3. **Variante B, „abgelehnt“ löschen:** Erst zurücksetzen (Schritt 5), dann den Pfeil „abgelehnt“ (`Flow_Abgelehnt`) anklicken und löschen, speichern. Im Texteditor gehören dazu auch `<bpmn:outgoing>` am Gateway, `<bpmn:incoming>` an `Task_Ablehnen` und die Kante `Flow_Abgelehnt_di`. Ergebnis: Nur der Ablehnungs-Test ist rot, Maven zählt ihn als „Error“, nicht als „Failure“. Das Abschließen der Aufgabe gelingt, die Engine scheitert erst am Speicherpunkt dahinter, die Zeile nennt deshalb `speicherpunktAnstossen`:
+   Darunter steht `Tests run: 4, Failures: 4, Errors: 0, Skipped: 0`.
+3. **Variante B, „abgelehnt“ löschen:** Erst das Modell zurücksetzen (Schritt 5), dann den Pfeil „abgelehnt“ (`Flow_Abgelehnt`) anklicken und löschen, speichern. Im Texteditor gehören dazu auch `<bpmn:outgoing>` am Gateway, `<bpmn:incoming>` an `Task_Ablehnen` und die Kante `Flow_Abgelehnt_di`. Ergebnis: Nur der Ablehnungs-Test ist rot, Maven zählt ihn als „Error“, nicht als „Failure“. Das Abschließen der Aufgabe gelingt, die Engine scheitert erst am Speicherpunkt dahinter, die Zeile nennt deshalb `speicherpunktAnstossen`:
    ```
-   GenehmigungsworkflowTest.abgelehnterAntragWirdMitgeteilt:83->speicherpunktAnstossen:158 » ProcessEngine ENGINE-02004 No outgoing sequence flow for the element with id 'Gateway_Entscheidung' could be selected for continuing the process.
+   GenehmigungsworkflowTest.abgelehnterAntragWirdMitgeteilt:83->speicherpunktAnstossen:160 » ProcessEngine ENGINE-02004 No outgoing sequence flow for the element with id 'Gateway_Entscheidung' could be selected for continuing the process.
    ```
-   Darunter steht `Tests run: 6, Failures: 0, Errors: 1, Skipped: 0`.
-4. **Gegenprobe:** Erst zurücksetzen, dann nur die Beschriftung „Antrag prüfen“ ändern, etwa in „Antrag fachlich prüfen“. Alle sechs Tests bleiben grün, der Test hängt an der ID.
-5. **Zurücksetzen**, nach jeder Variante, im Ordner `java-prozesstest/`:
+   Darunter steht `Tests run: 4, Failures: 0, Errors: 1, Skipped: 0`.
+4. **Gegenprobe:** Erst das Modell zurücksetzen, dann nur die Beschriftung „Antrag prüfen“ ändern, etwa in „Antrag fachlich prüfen“. Alle vier Tests bleiben grün, der Test hängt an der ID.
+5. **Modell zurücksetzen**, nach jeder Variante, im Ordner `java-prozesstest/`:
    ```bash
    git restore src/main/resources/genehmigungsworkflow.bpmn
    ```
-   **Nach der Demo** auch die Musterlösung entfernen, im Repo-Root, in bash und PowerShell gleich:
+   Nur das Modell, nicht den ganzen Ordner: Sonst ist der Test der Musterlösung weg, und Variante B bleibt grün.
+6. **Erst nach der Demo** den Startstand zurückholen, im Repo-Root, in bash und PowerShell gleich:
    ```bash
    git restore java-prozesstest
-   git clean -fd java-prozesstest
    ```
-   `git restore` holt Modell und `GenehmigungsworkflowTest.java` auf den Startstand zurück, `git clean` löscht `FehlerpfadTest.java` und alle anderen neuen Dateien in `java-prozesstest/`. Danach zeigt `git status` keine Änderung mehr, und `./mvnw test` meldet wieder 1 bestanden, 3 übersprungen. Bleibt eine geänderte Modellkopie im Repo, wird die CI rot, sie vergleicht die Kopie mit der Vorlage.
+   Das holt Modell und `GenehmigungsworkflowTest.java` auf den Startstand zurück. Danach zeigt `git status` keine Änderung mehr, und `./mvnw test` meldet wieder 1 bestanden, 3 übersprungen. Bleibt eine geänderte Modellkopie im Repo, wird die CI rot, sie vergleicht die Kopie mit der Vorlage.
 
-Bei Rot folgt unter „Results“ noch der Fehlertext von Maven. Baum und Meldungen stehen darüber, notfalls etwas hochscrollen.
+Maven setzt vor jede Zeile `[INFO]`, vor die Meldungen und vor `Tests run` bei Rot `[ERROR]`, die Blöcke hier lassen das weg. Bei Rot folgt unter „Results“ noch der Fehlertext von Maven. Baum und Meldungen stehen darüber, notfalls etwas hochscrollen.
 
 Ändert sich eine Vorlage unter `prozess/`, kopiert ihr sie neu nach `src/main/resources/`:
 

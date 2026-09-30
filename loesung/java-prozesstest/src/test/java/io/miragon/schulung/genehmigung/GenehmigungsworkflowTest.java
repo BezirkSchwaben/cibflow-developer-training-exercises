@@ -109,9 +109,11 @@ class GenehmigungsworkflowTest {
 
         complete(task());
 
+        // Wieder bei "Antrag prüfen", die Aufgabe liegt wieder bei der genehmigenden Stelle
         assertThat(antrag).isWaitingAtExactly("Task_Pruefen")
             .hasPassed("Task_Nachbessern")
             .hasNotPassed("Task_Verbuchen", "Task_Ablehnen");
+        assertThat(antrag).task().hasCandidateGroup("genehmiger");
     }
 
     @Test

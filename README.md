@@ -42,7 +42,7 @@ git --version
    dotnet run --project src/GenehmigungWorker
    ```
 
-Den Prozesstest in Java lasst ihr einmal vorab laufen, am besten gleich nach dem Klonen. Der erste Lauf lädt Maven und die Bibliotheken, rund 55 MB, danach geht es auch ohne Netz. Stack und Worker braucht er nicht. Im Repo-Root, bei laufendem Worker in einem zweiten Terminal:
+Den Prozesstest in Java lasst ihr einmal vorab laufen, am besten gleich nach dem Klonen. Der erste Lauf lädt Maven und die Bibliotheken, rund 55 MB, danach geht es auch ohne Netz. Stack und Worker braucht er nicht. Läuft euer Worker schon, nehmt ein zweites Terminal. Im Repo-Root:
 
 ```bash
 # macOS, Linux, Git Bash
@@ -58,7 +58,7 @@ cd java-prozesstest
 cd ..
 ```
 
-Erwartet: `Tests run: 4, Failures: 0, Errors: 0, Skipped: 3`. Die drei übersprungenen Tests schreibt ihr in Kapitel 12.
+Erwartet: `[WARNING] Tests run: 4, Failures: 0, Errors: 0, Skipped: 3`. Das `[WARNING]` kommt von den drei übersprungenen Tests und ist kein Fehler, die schreibt ihr in Kapitel 12. Scheitert der erste Lauf mit `PKIX path building failed` oder `Could not transfer artifact`, sitzt ihr hinter einem Proxy. Was dann hilft, steht in [java-prozesstest/README.md](java-prozesstest/README.md#hinter-einem-proxy).
 
 Konten, Adressen und typische Probleme mit dem Stack stehen in [stack/README.md](stack/README.md). Jeden Schritt ausführlich, mit PowerShell-Varianten, zeigen die Aufgabenblätter.
 
@@ -100,7 +100,7 @@ cibflow-developer-training-exercises/
 
 `stack/smoke-test.sh` prüft einen laufenden Stack per REST, mit allen drei Pfaden. Aufruf im Ordner `stack/` mit `./smoke-test.sh`, unter Windows in Git Bash mit `bash smoke-test.sh`. Stoppt vorher einen laufenden Worker. Mit `ENGINE_URL`, `PROZESS_KEY` und `BPMN` richtet ihr es auf eine andere Engine oder ein anderes Modell.
 
-Die Demo in Kapitel 10 läuft mit dem Projekt aus der Übung, `java-prozesstest/`, und seiner Musterlösung. Vorbereitung, Ablauf, die erwarteten Meldungen und das Zurücksetzen stehen in seiner [README](java-prozesstest/README.md#demo-kapitel-10-trainer).
+Die Demo in Kapitel 10 läuft mit dem Projekt aus der Übung, `java-prozesstest/`, und dem Test aus seiner Musterlösung. Vorbereitung, Ablauf, die erwarteten Meldungen und das Zurücksetzen stehen in seiner [README](java-prozesstest/README.md#demo-kapitel-10-trainer).
 
 Die GitHub Action `.github/workflows/build.yml` baut und testet bei jedem Push Startstand und Musterlösung, jeweils in C# und in Java. Warum sie für die Musterlösung eine eigene Engine aus `.github/ci-stack/` startet, steht im Kommentar der Datei.
 

@@ -8,7 +8,7 @@ Euer Worker aus Kapitel 11 holt den Task schon, verbucht aber nichts. Am Ende ve
 
 - Der Prozesstest in C# nimmt den Prozess-Key als `_engine.ProzessKey` aus `appsettings.json`: `Process_Genehmigung` mit der Vorlage, euer eigener Key mit eurem Projekt. Auf der Folie steht an dieser Stelle `"mm-genehmigung"`.
 - `betrag` kommt je nach Weg verschieden an: aus dem easyForm als Text, etwa `"1234.5"`, immer mit Punkt, per REST und im Prozesstest als Zahl (`long`). Der Handler muss beides lesen, Schritt 1 zeigt wie.
-- Für den Prozesstest in Java (Schritt 5) braucht ihr JDK 21 (`java -version`). Habt ihr im Ordner `java-prozesstest/` noch nie `./mvnw test` laufen lassen (Windows: `.\mvnw.cmd test`), startet es gleich zu Beginn in einem zweiten Terminal. Der erste Lauf lädt Maven und die Bibliotheken, rund 55 MB.
+- Für den Prozesstest in Java (Schritt 5) braucht ihr JDK 21 (`java -version`). Habt ihr im Ordner `java-prozesstest/` noch nie `./mvnw test` laufen lassen (Windows: `.\mvnw.cmd test`), startet es gleich zu Beginn in einem zweiten Terminal. Der erste Lauf lädt Maven und die Bibliotheken, rund 55 MB. Scheitert er mit `PKIX path building failed` oder `Could not transfer artifact`, steht unter [Meldungen aus dem Prozesstest in Java](#meldungen-aus-dem-prozesstest-in-java), was ihr tut.
 
 ## Ausgangslage
 
@@ -34,7 +34,7 @@ Im Startstand tragen diese Dateien Kommentare `TODO Kapitel 12, Schritt ...`. Si
 
 Fertig vorgegeben sind `Fachsystem/IBuchungssystem.cs` (die Signatur von `Verbuchen`), `ExternalTaskClient.cs` aus Kapitel 11 und der Test-Helfer `tests/GenehmigungWorker.Tests/EngineHelfer.cs`, im Prozesstest `_engine`. Alle TODOs findet ihr in VS Code mit Strg+Umschalt+F (macOS: Cmd+Umschalt+F) und dem Suchtext `TODO Kapitel 12`.
 
-`dotnet test` meldet im Startstand 3 übersprungene Tests und keinen Fehler. `./mvnw test` im Ordner `java-prozesstest/` meldet 1 bestandenen und 3 übersprungene Tests.
+`dotnet test` meldet im Startstand 3 übersprungene Tests und keinen Fehler. `./mvnw test` im Ordner `java-prozesstest/` meldet 1 bestandenen und 3 übersprungene Tests: `[WARNING] Tests run: 4, Failures: 0, Errors: 0, Skipped: 3`. Das `[WARNING]` kommt von den übersprungenen Tests und ist kein Fehler.
 
 ## Das macht ihr
 
@@ -47,7 +47,12 @@ Die Reihenfolge folgt der Empfehlung aus dem Kapitel: zuerst Handler und Unit-Te
 | 14:45 bis 15:05 | 20 | 5: Prozesstest in Java, Ablehnung und Nachbesserung. Den Timer schreibt, wer schneller ist |
 | 15:05 bis 15:15 | 10 | 6: End-to-end über das Formular |
 
-Hängt ihr hinterher, lasst ihr zuerst den Timer weg und geht spätestens um 15:05 Uhr zu Schritt 6. Die Boni sind für alle, die vor der Zeit fertig sind.
+Hängt ihr hinterher, gelten zwei Regeln:
+
+- Seid ihr um 14:45 Uhr noch nicht bei Schritt 4, macht ihr zuerst die Worker-Schleife fertig, Schritt 6 braucht sie. Danach schreibt ihr in C# den Happy Path und in Java nur die Ablehnung. Die Nachbesserung schreibt, wer noch Zeit hat.
+- In Schritt 5 lasst ihr zuerst den Timer weg. Um 15:05 Uhr geht ihr in jedem Fall zu Schritt 6. Was in Java fehlt, holt ihr danach nach, der Test braucht weder Stack noch Worker.
+
+Die Boni sind für alle, die vor der Zeit fertig sind.
 
 ### 1. Handler schreiben
 
@@ -64,7 +69,7 @@ Datei `src/GenehmigungWorker/Handlers/GenehmigungVerbuchenHandler.cs`, Folie „
        var zahl => Convert.ToDecimal(zahl, CultureInfo.InvariantCulture),
    };
    ```
-   Auf der Folie steht `Convert.ToDecimal(task.Variables["betrag"])`. Das reicht für Zahlen, aber nicht für den Text aus dem easyForm: Ohne `CultureInfo.InvariantCulture` liest ein Rechner mit deutscher Einstellung den Punkt in `"1234.5"` als Tausendertrennzeichen und verbucht 12.345 Euro statt 1.234,50 Euro.
+   Auf der Folie steht die kurze Form `Convert.ToDecimal(task.Variables["betrag"], CultureInfo.InvariantCulture)`. Sie liest Text und Zahl genauso, der `switch` zeigt nur ausdrücklich, welcher Fall welcher ist. Wichtig ist in beiden `CultureInfo.InvariantCulture`: Ohne sie liest ein Rechner mit deutscher Einstellung den Punkt in `"1234.5"` als Tausendertrennzeichen und verbucht 12.345 Euro statt 1.234,50 Euro.
 3. `_buchung.Verbuchen(schluessel, antragsteller, betrag, begruendung)` rufen.
 4. `new() { ["buchungsnummer"] = nummer }` zurückgeben.
 
@@ -116,90 +121,39 @@ Der Prozesstest braucht, was auch der Worker braucht: laufenden Stack, bereitges
 
 ### 5. Prozesstest in Java
 
-Ordner `java-prozesstest/`, Datei `src/test/java/io/miragon/schulung/genehmigung/GenehmigungsworkflowTest.java`, Folien „Ein Testfall in fünf Schritten“ und „Was ein Prozesstest prüft“ aus Kapitel 10. Mehr zum Projekt steht in seiner [README](../java-prozesstest/README.md).
+Ordner `java-prozesstest/`, Datei `src/test/java/io/miragon/schulung/genehmigung/GenehmigungsworkflowTest.java`, Folie „Prozesstest in Java“, dazu aus Kapitel 10 „Ein Testfall in fünf Schritten“ und „Was ein Prozesstest prüft“.
 
-**Ziel.** Derselbe Prozess, ein anderer Testaufbau: Der Prozesstest in C# spricht per REST mit eurer laufenden Engine. Der Test in Java startet die Engine selbst, im Speicher, und deployt für jeden Testfall die Kopie der Vorlage aus `src/main/resources/`. Er spielt Antragsteller:in, genehmigende Stelle und Worker und fragt die Engine, wo die Instanz wartet, welchen Pfad sie genommen hat und welche Variablen gesetzt sind. Stack und Worker braucht er nicht, ein Lauf dauert wenige Sekunden. Der Happy Path ist fertig, ihr schreibt Ablehnung und Nachbesserung, wer schneller ist, auch den Timer.
-
-**Voraussetzung.** JDK 21 oder neuer, `java -version` zeigt die Version. Maven braucht ihr nicht, der Maven Wrapper (`mvnw`) lädt es beim ersten Lauf.
-
-**Befehle.** Vom Repo-Root aus:
+Der Test startet die Engine selbst, im Speicher, und braucht weder Stack noch Worker. Der Happy Path ist fertig, ihr schreibt Ablehnung und Nachbesserung, wer schneller ist, auch den Timer. Befehle für Windows, die Ausgabe im Startstand und warum der Test die Speicherpunkte selbst anstößt, stehen in der [README des Projekts](../java-prozesstest/README.md).
 
 ```bash
-# macOS, Linux, Git Bash
 cd java-prozesstest
-./mvnw test
+./mvnw test          # Windows PowerShell: .\mvnw.cmd test
 ```
-
-```powershell
-# Windows PowerShell
-cd java-prozesstest
-.\mvnw.cmd test
-```
-
-Ab dem zweiten Lauf geht es auch ohne Netz: `./mvnw -o test`, in PowerShell `.\mvnw.cmd -o test`. Zurück in den Repo-Root kommt ihr mit `cd ..`. Zeigt die Windows-Konsole Fragezeichen statt ✔ und ✘, hilft vorher `chcp 65001`.
-
-Im Startstand läuft nur der Happy Path. Die anderen drei Tests überspringt JUnit, der Baum zeigt `↷` und den Grund aus `@Disabled`:
-
-```
-── Genehmigungsworkflow - 1.1 s
-   ├─ ✔ Happy Path: Antrag genehmigt und verbucht - 0.21 s
-   ├─ ↷ Ablehnung: „Ablehnung mitteilen“, nie verbuchen (TODO Kapitel 12, Schritt 5) - 0 s
-   ├─ ↷ Nachbesserung: zurück an die Antragsteller:in, danach wieder „Antrag prüfen“ (TODO Kapitel 12, Schritt 5) - 0 s
-   └─ ↷ Timer nach 3 Tagen: „Erinnerung senden“, Aufgabe bleibt offen (TODO Kapitel 12, Schritt 5, für alle, die schneller sind) - 0 s
-
-Results:
-
-Tests run: 4, Failures: 0, Errors: 0, Skipped: 3
-```
-
-**Schritte.** Jede TODO-Methode sagt im Kommentar, was ihr startet, wo die Instanz wartet und was ihr prüft.
 
 1. Lest den Happy Path `genehmigterAntragWirdVerbucht`. Seine Kommentare nummerieren die fünf Schritte der Folie: Starten, Warten, Entscheiden, Verbuchen, Beenden. Jede Zeile mit `assertThat` ist eine Prüfung.
-2. **Ablehnung**, `abgelehnterAntragWirdMitgeteilt`: starten, „Antrag prüfen“ mit `entscheidung` gleich `abgelehnt` abschließen, Speicherpunkt anstoßen. Dann prüfen: Instanz beendet, `Task_Ablehnen` und `End_Abgelehnt` durchlaufen, `Task_Verbuchen` und `End_Genehmigt` nicht, `ablehnungMitgeteilt` ist `true`, `buchungsnummer` fehlt.
-3. **Nachbesserung**, `nachbesserungFuehrtZurueckZurPruefung`: mit `nachbessern` abschließen, Speicherpunkt anstoßen. Jetzt wartet `Task_Nachbessern`, zugewiesen an `anna`. Diese Aufgabe ohne Variablen abschließen, danach wartet die Instanz wieder bei `Task_Pruefen`.
+2. **Ablehnung**, `abgelehnterAntragWirdMitgeteilt`: starten, Speicherpunkt nach dem Start anstoßen, „Antrag prüfen“ mit `entscheidung` gleich `abgelehnt` abschließen, Speicherpunkt nach „Antrag prüfen“ anstoßen. Dann prüfen: Instanz beendet, `Task_Ablehnen` und `End_Abgelehnt` durchlaufen, `Task_Verbuchen` und `End_Genehmigt` nicht, `ablehnungMitgeteilt` ist `true`, `buchungsnummer` fehlt.
+3. **Nachbesserung**, `nachbesserungFuehrtZurueckZurPruefung`: genauso, aber mit `nachbessern`. Jetzt wartet `Task_Nachbessern`, zugewiesen an `anna`. Diese Aufgabe schließt ihr ohne Variablen ab, einen Speicherpunkt hat sie nicht. Danach wartet die Instanz wieder bei `Task_Pruefen`, und die Aufgabe liegt wieder bei der Gruppe `genehmiger`.
 4. **Timer**, `timerSendetErinnerung`, für alle, die schneller sind: Den Timer-Job `Boundary_Timer` holen, seine Fälligkeit prüfen (in drei Tagen, auf eine Minute genau) und ihn ausführen, statt drei Tage zu warten. Danach wartet die Instanz weiter bei `Task_Pruefen`, `Task_Erinnern` und `End_Erinnert` sind durchlaufen, `erinnerungGesendet` ist `true`.
 5. Ist ein Test fertig, löscht ihr die Zeile `@Disabled(...)` über ihm und startet `./mvnw test`. Löscht sie erst, wenn der Test etwas prüft: Eine leere Methode ohne `@Disabled` läuft grün durch und belegt nichts.
 
-**Hilfsmethoden.** Am Ende der Klasse stehen zwei Methoden, die ihr in jedem Test nutzt:
-
-- `antragStarten()` startet `Process_Genehmigung` wie das Startformular, mit `betrag`, `begruendung` und `antragsteller` gleich `anna` (Konstante `ANTRAGSTELLER`), Business Key `Antrag-1`.
-- `speicherpunktAnstossen(antrag, "StartEvent_Antrag")` prüft, dass die Instanz genau am Speicherpunkt hinter diesem Element steht, und führt ihn aus.
-
-**Speicherpunkte.** Der Baustein „CIB easyForm“ setzt hinter „Antrag eingereicht“ (`StartEvent_Antrag`) und hinter „Antrag prüfen“ (`Task_Pruefen`) je einen Speicherpunkt (`camunda:asyncAfter`). Im laufenden System führt sie der Job Executor der Engine kurz danach aus, die Engine im Test hat keinen. Deshalb stoßt ihr sie selbst an: nach dem Start `speicherpunktAnstossen(antrag, "StartEvent_Antrag")`, nach dem Abschließen von „Antrag prüfen“ `speicherpunktAnstossen(antrag, "Task_Pruefen")`. Erst dann entscheidet das Gateway. „Antrag nachbessern“ hat keinen Speicherpunkt, nach dem Abschließen wartet die Instanz sofort wieder bei „Antrag prüfen“. Den Timer führt ihr genauso selbst aus, mit `execute(...)`.
-
-**Die Aufrufe**, alle schon importiert:
+**Die Aufrufe**, alle schon importiert. Die Kommentare in jeder TODO-Methode sagen, welche ihr braucht.
 
 | Aufruf | Was er tut |
 |---|---|
+| `ProcessInstance antrag = antragStarten();` | Hilfsmethode am Ende der Klasse: startet `Process_Genehmigung` wie das Startformular, `antragsteller` ist `anna` (Konstante `ANTRAGSTELLER`) |
+| `speicherpunktAnstossen(antrag, "StartEvent_Antrag")` | Hilfsmethode: prüft, dass die Instanz am Speicherpunkt hinter diesem Element steht, und führt ihn aus. Nach dem Start mit `StartEvent_Antrag`, nach „Antrag prüfen“ mit `Task_Pruefen`, erst dann entscheidet das Gateway |
 | `assertThat(antrag).isWaitingAtExactly("Task_Pruefen")` | Wartezustand: Die Instanz wartet genau dort und nirgends sonst |
 | `complete(task(), withVariables("entscheidung", "abgelehnt"))` | schließt die offene Aufgabe ab wie die genehmigende Stelle, `complete(task())` ohne Variablen |
-| `assertThat(antrag).task().isAssignedTo(ANTRAGSTELLER)` | prüft, wem die offene Aufgabe gehört |
+| `assertThat(antrag).task().isAssignedTo(ANTRAGSTELLER)` | prüft, wem die offene Aufgabe gehört, `hasCandidateGroup("genehmiger")` die Gruppe |
 | `assertThat(antrag).isEnded().hasPassed(...).hasNotPassed(...)` | Pfad: beendet, durchlaufen, nicht durchlaufen, je mit einer oder mehreren IDs |
 | `assertThat(antrag).variables().containsEntry("ablehnungMitgeteilt", true)` | Variablen, `doesNotContainKey("buchungsnummer")` für eine, die fehlen muss |
-| `Job timer = job("Boundary_Timer", antrag);` und `execute(timer);` | holt den Timer-Job und führt ihn aus, `timer.getDuedate()` ist seine Fälligkeit |
+| `Job timer = job("Boundary_Timer", antrag);` und `execute(timer);` | holt den Timer-Job und führt ihn aus, `timer.getDuedate()` ist seine Fälligkeit. Das Datum prüft ihr mit `Assertions.assertThat(...)`, wie im Kommentar |
 
 Nehmt immer die IDs aus dem Modell, etwa `Task_Ablehnen`, nie die Beschriftung „Ablehnung mitteilen“.
 
-Fertig seid ihr, wenn der Baum viermal ✔ zeigt und darunter `Tests run: 4, Failures: 0, Errors: 0, Skipped: 0` steht, ohne Timer `Skipped: 1`.
+Fertig seid ihr, wenn der Baum viermal ✔ zeigt und darunter `Tests run: 4, Failures: 0, Errors: 0, Skipped: 0` steht, ohne Timer `Skipped: 1`. Maven setzt `[INFO]` davor, mit übersprungenen Tests `[WARNING]`, beides ist kein Fehler.
 
-**Typische Meldungen.** Unter dem Baum steht im Block „Results“ je rotem Test eine Zeile: Klasse, Methode, Zeilennummer und die Meldung.
-
-| Was ihr seht | Woran es liegt, was ihr tut |
-|---|---|
-| `↷` vor eurem Test, `Skipped` zählt ihn noch | `@Disabled` steht noch über der Methode. |
-| `to be waiting at exactly [Task_Pruefen], but it is actually waiting at [StartEvent_Antrag]` | Der Speicherpunkt nach dem Start fehlt: `speicherpunktAnstossen(antrag, "StartEvent_Antrag")`. Allgemein nennt `actually waiting at [...]` die Stelle, an der die Instanz wirklich wartet. |
-| `to be ended, but it is not!` | Nach dem Abschließen von „Antrag prüfen“ fehlt `speicherpunktAnstossen(antrag, "Task_Pruefen")`, das Gateway hat noch nicht entschieden. |
-| `ENGINE-02004 No outgoing sequence flow for the element with id 'Gateway_Entscheidung' could be selected for continuing the process.` | Kein Pfeil passt zur `entscheidung`. Die Werte heißen genau `genehmigt`, `abgelehnt` und `nachbessern`, kleingeschrieben. |
-| `Illegal call of execute(job = 'null') - must not be null!` | Diesen Job gibt es gerade nicht, etwa `speicherpunktAnstossen(antrag, "Task_Pruefen")`, bevor ihr die Aufgabe abgeschlossen habt. |
-| `Cannot invoke "org.cibseven.bpm.engine.runtime.Job.getDuedate()" because "timer" is null` | Den Timer gibt es erst, wenn die Instanz bei „Antrag prüfen“ wartet. Stoßt vorher den Speicherpunkt nach dem Start an. |
-| `Illegal call of complete(task = 'null') - must not be null!` | Es wartet keine Aufgabe. Prüft vorher mit `isWaitingAtExactly`, wo die Instanz steht. |
-| `Call a process instance assertion first - e.g. assertThat(processInstance)... !` | `task()` weiß nicht, welche Instanz gemeint ist. Ruft vorher `assertThat(antrag)` auf, `speicherpunktAnstossen` tut das auch. |
-| `to have passed activities [Ablehnung mitteilen] at least once, but actually we found that it passed [StartEvent_Antrag, Task_Pruefen, Gateway_Entscheidung, Task_Ablehnen, End_Abgelehnt]` | Beschriftung statt ID. Die Liste dahinter zeigt die IDs des Pfads, den die Instanz genommen hat. |
-| `["ablehnungMitgeteilt"=true (expected: "true")]` | Text statt Wahrheitswert: `true`, nicht `"true"`. |
-| `to be unfinished, but found that it already finished!` | Die Instanz ist schon zu Ende, der Test fragt aber nach einem Wartezustand. Nach der Ablehnung prüft ihr `isEnded()`. |
-| `COMPILATION ERROR` mit Datei und `[Zeile,Spalte]`, etwa `';' erwartet` (englisch: `';' expected`) | Java-Syntax an dieser Stelle: Semikolon, Klammer oder Anführungszeichen fehlt. |
-| `Fatal error compiling: error: release version 21 not supported` | Maven läuft mit einem älteren JDK. `java -version` muss 21 oder neuer zeigen, sonst setzt ihr `JAVA_HOME` auf das JDK 21. |
-| `The JAVA_HOME environment variable is not defined correctly` | Maven findet kein JDK. JDK 21 installieren oder `JAVA_HOME` auf sein Verzeichnis setzen, dann ein neues Terminal öffnen. |
+Wird ein Test rot, steht unter dem Baum im Block „Results“ je Test eine Zeile mit Klasse, Methode, Zeilennummer und Meldung. Was die häufigen Meldungen bedeuten, steht unter [Meldungen aus dem Prozesstest in Java](#meldungen-aus-dem-prozesstest-in-java).
 
 #### Bonus: Fehlerpfad in Java
 
@@ -207,7 +161,7 @@ Für alle, die schneller fertig sind. Ihr testet die Variante mit dem fachlichen
 
 1. Legt neben `GenehmigungsworkflowTest.java` die Klasse `FehlerpfadTest.java` an, mit denselben Annotationen, aber `@Deployment(resources = "verbuchen-fehlerpfad.bpmn")`.
 2. **Starten:** `runtimeService().startProcessInstanceByKey("Process_VerbuchenFehlerpfad", withVariables("antragsteller", "anna", "betrag", 60000, "begruendung", "Neue Serverhardware"))`. Die Variante hat keinen Speicherpunkt, die Instanz wartet sofort bei `Task_Verbuchen`.
-3. **Holen wie der Worker:** `List<LockedExternalTask> tasks = fetchAndLock("genehmigung-verbuchen", "prozesstest", 1);`
+3. **Holen wie der Worker:** `List<LockedExternalTask> tasks = fetchAndLock("genehmigung-verbuchen", "prozesstest", 1);` Meldet der Test später `IndexOutOfBounds` mit `Index 0 out of bounds for length 0` bei `tasks.get(0)`, hat `fetchAndLock` nichts geholt. Prüft das Topic `genehmigung-verbuchen`. Die Musterlösung prüft deshalb vorher mit `hasSize(1)`.
 4. **Ablehnen wie der Worker:** `externalTaskService().handleBpmnError(tasks.get(0).getId(), "prozesstest", "BUCHUNG_ABGELEHNT", "Budget der Kostenstelle reicht nicht")`. Antworten darf nur, wer den Task gesperrt hat, deshalb zuerst `fetchAndLock`.
 5. **Prüfen:** Die Instanz wartet genau bei `Task_BuchungKlaeren` mit der Kandidatengruppe `genehmiger`, `errorCode` ist `BUCHUNG_ABGELEHNT`, `errorMessage` euer Grund, `Task_GenehmigungMitteilen` ist nicht durchlaufen.
 6. **Gegenprobe** als zweiter Test: mit `betrag` 1200 starten, den geholten Task mit `complete(tasks.get(0), withVariables("buchungsnummer", "B-2026-0001"))` abschließen. Dann ist die Instanz beendet, `Task_GenehmigungMitteilen` und `End_Genehmigt` sind durchlaufen, `Task_BuchungKlaeren` nicht, und `genehmigungMitgeteilt` ist `true`.
@@ -276,7 +230,29 @@ Die erste Antwort nennt je Instanz `processInstanceId` und `value` der `buchungs
 | Prozesstest in C#: `lieferte 401 Unauthorized` | Benutzer oder Passwort falsch. `dotnet user-secrets list --project src/GenehmigungWorker` zeigt, was gesetzt ist. |
 | `dotnet test` meldet euren fertigen Test als übersprungen | `Skip` steht noch am `[Fact]`. |
 | Die Instanz hängt am Service Task „Genehmigung verbuchen“ | In dieser Reihenfolge prüfen: Schreibweise des Topics in Modell und `appsettings.json`, `EngineUrl`, Lock (ein abgestürzter Worker hält ihn bis zu 30 Sekunden), `failure` mit fünf Minuten Pause. |
-| Eine Meldung aus dem Prozesstest in Java | Die häufigen stehen in [Schritt 5 unter „Typische Meldungen“](#5-prozesstest-in-java). |
+
+### Meldungen aus dem Prozesstest in Java
+
+Nur lesen, wenn es rot wird. Unter dem Baum steht im Block „Results“ je rotem Test eine Zeile: Klasse, Methode, Zeilennummer und die Meldung.
+
+| Was ihr seht | Woran es liegt, was ihr tut |
+|---|---|
+| `↷` vor eurem Test, `Skipped` zählt ihn noch | `@Disabled` steht noch über der Methode. |
+| `to be waiting at exactly [Task_Pruefen], but it is actually waiting at [StartEvent_Antrag]` | Der Speicherpunkt nach dem Start fehlt: `speicherpunktAnstossen(antrag, "StartEvent_Antrag")`. Allgemein nennt `actually waiting at [...]` die Stelle, an der die Instanz wirklich wartet. |
+| `to be ended, but it is not!` | Nach dem Abschließen von „Antrag prüfen“ fehlt `speicherpunktAnstossen(antrag, "Task_Pruefen")`, das Gateway hat noch nicht entschieden. Den Zusatz `Please make sure you have set the history service ...` ignoriert ihr, die History ist eingeschaltet. |
+| `ENGINE-02004 No outgoing sequence flow for the element with id 'Gateway_Entscheidung' could be selected for continuing the process.` | Kein Pfeil passt zur `entscheidung`. Die Werte heißen genau `genehmigt`, `abgelehnt` und `nachbessern`, kleingeschrieben. |
+| `Illegal call of execute(job = 'null') - must not be null!` | Diesen Job gibt es gerade nicht, etwa `speicherpunktAnstossen(antrag, "Task_Pruefen")`, bevor ihr die Aufgabe abgeschlossen habt. |
+| `Cannot invoke "org.cibseven.bpm.engine.runtime.Job.getDuedate()" because "timer" is null` | Den Timer gibt es erst, wenn die Instanz bei „Antrag prüfen“ wartet. Stoßt vorher den Speicherpunkt nach dem Start an. |
+| `Illegal call of complete(task = 'null'` | Es wartet keine Aufgabe. Mit Variablen endet die Meldung auf `both must not be null!`. Prüft vorher mit `isWaitingAtExactly`, wo die Instanz steht. |
+| `Call a process instance assertion first - e.g. assertThat(processInstance)... !` | `task()` weiß nicht, welche Instanz gemeint ist. Ruft vorher `assertThat(antrag)` auf, `speicherpunktAnstossen` tut das auch. Ohne `assertThat` nimmt `task()` die Instanz aus dem letzten `assertThat`, notfalls aus dem vorigen Test. Diese Meldung seht ihr deshalb nur, wenn der Test allein läuft, sonst kommt meist `Illegal call of complete(task = 'null'`. |
+| `to have passed activities [Ablehnung mitteilen] at least once, but actually we found that it passed [StartEvent_Antrag, Task_Pruefen, Gateway_Entscheidung, Task_Ablehnen, End_Abgelehnt]` | Beschriftung statt ID. Die Liste dahinter zeigt die IDs des Pfads, den die Instanz genommen hat. |
+| `["ablehnungMitgeteilt"=true (expected: "true")]` | Text statt Wahrheitswert: `true`, nicht `"true"`. |
+| `to be unfinished, but found that it already finished!` | Die Instanz ist schon zu Ende, der Test fragt aber nach einem Wartezustand. Nach der Ablehnung prüft ihr `isEnded()`. |
+| `COMPILATION ERROR` mit Datei und `[Zeile,Spalte]`, etwa `';' erwartet` (englisch: `';' expected`) | Java-Syntax an dieser Stelle: Semikolon, Klammer oder Anführungszeichen fehlt. |
+| `Methode für assertThat(java.util.Date) nicht geeignet` (englisch: `no suitable method found for assertThat(java.util.Date)`), darunter fünf Methoden aus `BpmnAwareTests` | Das importierte `assertThat` kennt nur Objekte der Engine wie Instanz, Aufgabe und Job. Für Datum und Listen schreibt ihr `Assertions.assertThat(...)`. |
+| `Fatal error compiling: error: release version 21 not supported` | Maven läuft mit einem älteren JDK. `java -version` muss 21 oder neuer zeigen, sonst setzt ihr `JAVA_HOME` auf das JDK 21. |
+| `The JAVA_HOME environment variable is not defined correctly` | Maven findet kein JDK. JDK 21 installieren oder `JAVA_HOME` auf sein Verzeichnis setzen, dann ein neues Terminal öffnen. |
+| Der erste Lauf scheitert mit `PKIX path building failed` oder `Could not transfer artifact` | Ihr sitzt hinter einem Proxy, oder eure IT prüft verschlüsselte Verbindungen. Tragt den Proxy in `~/.m2/settings.xml` ein oder startet den ersten Lauf außerhalb des Behördennetzes, etwa über einen Hotspot, siehe [README des Projekts](../java-prozesstest/README.md#hinter-einem-proxy). Klappt es am Schulungstag nicht, schreibt ihr den Java-Teil zu zweit am Rechner eurer Nachbarn. |
 
 ## Bonus: Idempotenz
 
@@ -352,7 +328,7 @@ Warum die Variante? Mit 60.000 Euro aus dem Startformular kommt auch die Vorlage
 
 ```bash
 git diff --no-index src/GenehmigungWorker/Program.cs loesung/src/GenehmigungWorker/Program.cs
-git diff --no-index java-prozesstest/src/test loesung/java-prozesstest/src/test
+git diff --no-index java-prozesstest/src/test/java loesung/java-prozesstest/src/test/java
 ```
 
 **Übernehmen:** Im Repo-Root kopiert ihr die Musterlösung über den Startstand. Das überschreibt eure Fassungen dieser Dateien, sichert oder committet sie vorher.
@@ -464,5 +440,5 @@ Den Test-Helfer `EngineHelfer.cs` (im Test `_engine`) bekommt ihr fertig: je Met
 - `deploy` mit Pfad spielt eine andere Datei ein, etwa eine Variante unter `prozess/varianten/`. Deployment und Ressource heißen dann wie die Datei, nicht wie der `ProzessKey` der Vorlage.
 - Für den Bonus fachlicher Fehler lehnt die Simulation der Musterlösung jede Buchung über 50.000 Euro ab (`BudgetJeBuchung`) und speichert sie nicht. Die Ablehnung ist eine eigene Exception unter `Fachsystem/`, `BuchungAbgelehntException`. Der Handler bleibt, wie er ist, erst die Schleife macht aus der Exception ein `bpmnError`. Die Beträge in Meldung und Log stehen immer im deutschen Format, egal wie der Rechner eingestellt ist.
 - Der Prozesstest in Java testet die Kopie der Vorlage in `java-prozesstest/src/main/resources/`, nicht euer Modell in der Engine. Die GitHub Action hält die Kopie byte-gleich zu `prozess/genehmigungsworkflow.bpmn`, ebenso die Kopie der Variante.
-- Übung und Demo teilen sich ein Java-Projekt. Für die Demo in Kapitel 10 übernimmt der Trainer die Musterlösung und setzt danach zurück, siehe [README des Projekts](../java-prozesstest/README.md#demo-kapitel-10-trainer).
+- Übung und Demo teilen sich ein Java-Projekt. Für die Demo in Kapitel 10 übernimmt der Trainer den Test der Musterlösung und setzt danach zurück, siehe [README des Projekts](../java-prozesstest/README.md#demo-kapitel-10-trainer).
 - Im Java-Bonus holt der Test den External Task selbst mit `fetchAndLock` und antwortet mit `handleBpmnError` oder `complete`, wie der Worker. Einen Handler oder Fake aus C# braucht er nicht.

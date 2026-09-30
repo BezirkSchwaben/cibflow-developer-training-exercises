@@ -108,6 +108,8 @@ class GenehmigungsworkflowTest {
         // Nachbessern: die Aufgabe ohne Variablen abschließen, complete(task())
         // Prüfen:      wieder genau bei "Task_Pruefen", ohne Speicherpunkt dazwischen
         //              Pfad: "Task_Nachbessern" durchlaufen, "Task_Verbuchen" und "Task_Ablehnen" nicht
+        //              Aufgabe: "Antrag prüfen" ist wieder offen bei der Gruppe genehmiger
+        //              (assertThat(antrag).task().hasCandidateGroup("genehmiger"), wie im Happy Path)
     }
 
     @Test
@@ -120,6 +122,7 @@ class GenehmigungsworkflowTest {
         // Fälligkeit:  timer.getDuedate() liegt drei Tage in der Zukunft, auf eine Minute genau:
         //              Date inDreiTagen = Date.from(Instant.now().plus(Duration.ofDays(3)));
         //              Assertions.assertThat(timer.getDuedate()).isCloseTo(inDreiTagen, Duration.ofMinutes(1).toMillis());
+        //              Hier mit "Assertions.": Das importierte assertThat kennt kein Datum.
         // Auslösen:    execute(timer), statt drei Tage zu warten
         // Prüfen:      weiter genau bei "Task_Pruefen", der Timer unterbricht die Aufgabe nicht
         //              Pfad: "Task_Erinnern" und "End_Erinnert" durchlaufen, "Task_Pruefen" nie beendet (hasNotPassed)
