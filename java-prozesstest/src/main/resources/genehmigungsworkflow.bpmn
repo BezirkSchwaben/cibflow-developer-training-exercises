@@ -19,7 +19,6 @@
                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
-                  xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0"
                   xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
                   id="Definitions_Genehmigungsworkflow"
                   targetNamespace="https://miragon.io/schulung/genehmigungsworkflow"
@@ -223,7 +222,7 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <bpmndi:BPMNShape id="Task_Verbuchen_di" bpmnElement="Task_Verbuchen" bioc:stroke="#335DE5" bioc:fill="#EEF2FE">
+      <bpmndi:BPMNShape id="Task_Verbuchen_di" bpmnElement="Task_Verbuchen">
         <dc:Bounds x="640" y="290" width="100" height="80" />
       </bpmndi:BPMNShape>
 
