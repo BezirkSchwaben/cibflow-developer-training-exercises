@@ -25,6 +25,8 @@
                   exporter="Miragon"
                   exporterVersion="1.0">
 
+  <bpmn:message id="Message_AntragZurueckgezogen" name="antrag-zurueckgezogen" />
+
   <bpmn:collaboration id="Collaboration_Genehmigung">
     <bpmn:participant id="Participant_Genehmigung" name="Genehmigungsworkflow" processRef="Process_Genehmigung" />
   </bpmn:collaboration>
@@ -118,6 +120,22 @@
       <bpmn:outgoing>Flow_Nachbessern_Pruefen</bpmn:outgoing>
     </bpmn:userTask>
 
+    <bpmn:subProcess id="SubProcess_Ruecknahme" name="Rücknahme" triggeredByEvent="true">
+      <bpmn:startEvent id="StartEvent_Ruecknahme" name="Rücknahme eingegangen">
+        <bpmn:outgoing>Flow_Ruecknahme_Benachrichtigen</bpmn:outgoing>
+        <bpmn:messageEventDefinition id="MessageEventDefinition_Ruecknahme" messageRef="Message_AntragZurueckgezogen" />
+      </bpmn:startEvent>
+      <bpmn:sendTask id="Task_Benachrichtigen" name="Genehmigende Stelle benachrichtigen" camunda:expression="${execution.setVariable('stelleBenachrichtigt', true)}">
+        <bpmn:incoming>Flow_Ruecknahme_Benachrichtigen</bpmn:incoming>
+        <bpmn:outgoing>Flow_Benachrichtigen_End</bpmn:outgoing>
+      </bpmn:sendTask>
+      <bpmn:endEvent id="End_Zurueckgezogen" name="Antrag zurückgezogen">
+        <bpmn:incoming>Flow_Benachrichtigen_End</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_Ruecknahme_Benachrichtigen" sourceRef="StartEvent_Ruecknahme" targetRef="Task_Benachrichtigen" />
+      <bpmn:sequenceFlow id="Flow_Benachrichtigen_End" sourceRef="Task_Benachrichtigen" targetRef="End_Zurueckgezogen" />
+    </bpmn:subProcess>
+
     <bpmn:sequenceFlow id="Flow_Start_Pruefen" sourceRef="StartEvent_Antrag" targetRef="Task_Pruefen" />
     <bpmn:sequenceFlow id="Flow_Pruefen_Gateway" sourceRef="Task_Pruefen" targetRef="Gateway_Entscheidung" />
     <bpmn:sequenceFlow id="Flow_Genehmigt" name="genehmigt" sourceRef="Gateway_Entscheidung" targetRef="Task_Verbuchen">
@@ -155,7 +173,7 @@
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_Genehmigung">
 
       <bpmndi:BPMNShape id="Participant_Genehmigung_di" bpmnElement="Participant_Genehmigung" isHorizontal="true">
-        <dc:Bounds x="130" y="60" width="980" height="450" />
+        <dc:Bounds x="130" y="60" width="980" height="570" />
       </bpmndi:BPMNShape>
 
       <bpmndi:BPMNShape id="StartEvent_Antrag_di" bpmnElement="StartEvent_Antrag">
@@ -230,6 +248,28 @@
         <dc:Bounds x="190" y="400" width="120" height="50" />
       </bpmndi:BPMNShape>
 
+      <bpmndi:BPMNShape id="SubProcess_Ruecknahme_di" bpmnElement="SubProcess_Ruecknahme" isExpanded="true">
+        <dc:Bounds x="560" y="460" width="320" height="140" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="StartEvent_Ruecknahme_di" bpmnElement="StartEvent_Ruecknahme">
+        <dc:Bounds x="590" y="522" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="563" y="565" width="90" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Benachrichtigen_di" bpmnElement="Task_Benachrichtigen">
+        <dc:Bounds x="666" y="500" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="End_Zurueckgezogen_di" bpmnElement="End_Zurueckgezogen">
+        <dc:Bounds x="806" y="522" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="779" y="565" width="90" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
       <bpmndi:BPMNEdge id="Flow_Start_Pruefen_di" bpmnElement="Flow_Start_Pruefen">
         <di:waypoint x="248" y="280" />
         <di:waypoint x="330" y="280" />
@@ -296,6 +336,14 @@
         <di:waypoint x="290" y="400" />
       </bpmndi:BPMNEdge>
 
+      <bpmndi:BPMNEdge id="Flow_Ruecknahme_Benachrichtigen_di" bpmnElement="Flow_Ruecknahme_Benachrichtigen">
+        <di:waypoint x="626" y="540" />
+        <di:waypoint x="666" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Benachrichtigen_End_di" bpmnElement="Flow_Benachrichtigen_End">
+        <di:waypoint x="766" y="540" />
+        <di:waypoint x="806" y="540" />
+      </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
