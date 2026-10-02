@@ -4,7 +4,7 @@ obj/
 TestResults/
 *.user
 
-# Java-Build-Ausgaben (java-prozesstest)
+# Java-Build-Ausgaben (prozesstest-java)
 target/
 
 # IDEs

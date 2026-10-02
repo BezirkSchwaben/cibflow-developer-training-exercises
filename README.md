@@ -34,9 +34,10 @@ git --version
    cd ..
    ```
 3. http://localhost:7083/client öffnen und als `demo` mit Passwort `demo` anmelden.
-4. Projekt importieren: Kachel „Prozessmanagement“, „Lokale Datei importieren“, euer Projekt-ZIP oder `prozess/genehmigungsworkflow-projekt.zip` wählen, „Automatisch bereitstellen“ an lassen, „Importieren“. Mit eigenem Projekt tragt ihr dessen Process ID als `ProzessKey` in `src/GenehmigungWorker/appsettings.json` ein.
-5. Worker starten:
+4. Projekt importieren: Kachel „Prozessmanagement“, „Lokale Datei importieren“, euer Projekt-ZIP oder `prozess/genehmigungsworkflow-projekt.zip` wählen, „Automatisch bereitstellen“ an lassen, „Importieren“. Mit eigenem Projekt tragt ihr dessen Process ID als `ProzessKey` in `worker/src/GenehmigungWorker/appsettings.json` ein.
+5. Worker starten. Alle `dotnet`-Befehle laufen im Ordner `worker/`:
    ```bash
+   cd worker
    dotnet user-secrets set EngineBenutzer worker --project src/GenehmigungWorker
    dotnet user-secrets set EnginePasswort worker --project src/GenehmigungWorker
    dotnet run --project src/GenehmigungWorker
@@ -46,19 +47,19 @@ Den Prozesstest in Java lasst ihr einmal vorab laufen, am besten gleich nach dem
 
 ```bash
 # macOS, Linux, Git Bash
-cd java-prozesstest
+cd prozesstest-java
 ./mvnw test
 cd ..
 ```
 
 ```powershell
 # Windows PowerShell
-cd java-prozesstest
+cd prozesstest-java
 .\mvnw.cmd test
 cd ..
 ```
 
-Erwartet: `[WARNING] Tests run: 4, Failures: 0, Errors: 0, Skipped: 3`. Das `[WARNING]` kommt von den drei übersprungenen Tests und ist kein Fehler, die schreibt ihr in Kapitel 12. Scheitert der erste Lauf mit `PKIX path building failed` oder `Could not transfer artifact`, sitzt ihr hinter einem Proxy. Was dann hilft, steht in [java-prozesstest/README.md](java-prozesstest/README.md#hinter-einem-proxy).
+Erwartet: `[WARNING] Tests run: 4, Failures: 0, Errors: 0, Skipped: 3`. Das `[WARNING]` kommt von den drei übersprungenen Tests und ist kein Fehler, die schreibt ihr in Kapitel 12. Scheitert der erste Lauf mit `PKIX path building failed` oder `Could not transfer artifact`, sitzt ihr hinter einem Proxy. Was dann hilft, steht in [prozesstest-java/README.md](prozesstest-java/README.md#hinter-einem-proxy).
 
 Konten, Adressen und typische Probleme mit dem Stack stehen in [stack/README.md](stack/README.md). Jeden Schritt ausführlich, mit PowerShell-Varianten, zeigen die Aufgabenblätter.
 
@@ -73,8 +74,11 @@ Jedes Aufgabenblatt nennt Ausgangslage, Schritte, woran ihr seht, dass ihr ferti
 
 ## Was wo liegt
 
+Ihr arbeitet in zwei Ordnern: `worker/` für C# und `prozesstest-java/` für Java. Die fertige Fassung beider Projekte liegt unter `loesung/`. Wie ihr sie baut und mit eurem Stand vergleicht, steht in [loesung/README.md](loesung/README.md).
+
 ```
 cibflow-developer-training-exercises/
+├── aufgaben/                           # die Aufgabenblätter zu Kapitel 11 und 12
 ├── stack/                              # CIB flow lokal per Docker Compose, Anleitung in stack/README.md
 │   ├── docker-compose.yml              # Engine, Weboberfläche, Werkzeuge, Benutzer-Init
 │   ├── config/                         # Konfiguration der CIB flow Dienste für die Schulung
@@ -87,12 +91,17 @@ cibflow-developer-training-exercises/
 │   ├── projekt-zip-bauen.py            # baut das Projekt-ZIP neu, nach Änderungen an Modell oder Formularen
 │   └── varianten/verbuchen-fehlerpfad.bpmn  # Variante für den Bonus fachlicher Fehler
 ├── http/genehmigungsworkflow.http      # alle REST-Schritte zum Durchklicken in VS Code
-├── aufgaben/                           # die Aufgabenblätter zu Kapitel 11 und 12
-├── GenehmigungWorker.sln               # Solution für den Worker und seine Tests
-├── src/GenehmigungWorker/              # der External Task Worker (Konsolen-App, .NET 10)
-├── tests/GenehmigungWorker.Tests/      # Unit-Tests und Prozesstests (xUnit)
-├── java-prozesstest/                   # Prozesstest in Java, Engine im Speicher: Übung Kapitel 12, Demo Kapitel 10
-├── loesung/                            # Musterlösung zu Kapitel 12, gleiche Pfade wie src/, tests/ und java-prozesstest/
+├── worker/                             # C#: euer Worker und seine Tests, hier laufen alle dotnet-Befehle
+│   ├── GenehmigungWorker.sln           # Solution für den Worker und seine Tests
+│   ├── src/GenehmigungWorker/          # der External Task Worker (Konsolen-App, .NET 10)
+│   └── tests/GenehmigungWorker.Tests/  # Unit-Tests und Prozesstests (xUnit)
+├── prozesstest-java/                   # Java: eure Prozesstests, Engine im Speicher, Anleitung in prozesstest-java/README.md
+│   ├── mvnw, mvnw.cmd, pom.xml         # Maven Wrapper und Projektdatei
+│   ├── src/main/resources/             # Kopien von Modell und Variante
+│   └── src/test/java/                  # die Prozesstests (JUnit 5)
+├── loesung/                            # Musterlösung zu Kapitel 12 als zwei vollständige Projekte, Anleitung in loesung/README.md
+│   ├── worker/                         # der fertige Worker mit allen Tests, gleicher Aufbau wie worker/
+│   └── prozesstest-java/               # die fertigen Prozesstests in Java, hier läuft die Demo zu Kapitel 10
 └── .github/                            # CI: baut und testet Startstand und Musterlösung, in C# und Java
 ```
 
@@ -100,9 +109,9 @@ cibflow-developer-training-exercises/
 
 `stack/smoke-test.sh` prüft einen laufenden Stack per REST, mit allen drei Pfaden. Aufruf im Ordner `stack/` mit `./smoke-test.sh`, unter Windows in Git Bash mit `bash smoke-test.sh`. Stoppt vorher einen laufenden Worker. Mit `ENGINE_URL`, `PROZESS_KEY` und `BPMN` richtet ihr es auf eine andere Engine oder ein anderes Modell.
 
-Die Demo in Kapitel 10 läuft mit dem Projekt aus der Übung, `java-prozesstest/`, und dem Test aus seiner Musterlösung. Vorbereitung, Ablauf, die erwarteten Meldungen und das Zurücksetzen stehen in seiner [README](java-prozesstest/README.md#demo-kapitel-10-trainer).
+Die Demo in Kapitel 10 läuft in `loesung/prozesstest-java/`, dort liegt der fertige Test schon. Das Modell ändert ihr vorübergehend in `loesung/prozesstest-java/src/main/resources/genehmigungsworkflow.bpmn`, zurück geht es im Repo-Root mit `git restore loesung/prozesstest-java`. Der Startstand `prozesstest-java/` bleibt für die Übung unberührt. Vorbereitung, Ablauf und die erwarteten Meldungen stehen in [prozesstest-java/README.md](prozesstest-java/README.md#demo-kapitel-10-trainer).
 
-Die GitHub Action `.github/workflows/build.yml` baut und testet bei jedem Push Startstand und Musterlösung, jeweils in C# und in Java. Warum sie für die Musterlösung eine eigene Engine aus `.github/ci-stack/` startet, steht im Kommentar der Datei.
+Die GitHub Action `.github/workflows/build.yml` baut und testet bei jedem Push Startstand und Musterlösung, jeweils in C# und in Java. Warum sie für die Musterlösung eine eigene Engine aus `.github/ci-stack/` startet, steht im Kommentar der Datei. Dazu prüft `.github/scripts/loesung-abgleich.sh`, auch in der CI, dass die Musterlösung jede Datei des Startstands enthält und nur in den Übungsdateien abweicht. Die Liste der Übungsdateien steht im Skript.
 
 ## Lizenz
 

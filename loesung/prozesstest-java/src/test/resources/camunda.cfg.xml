@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Die Engine für den Test: H2 im Speicher, ohne Job Executor.
+  Speicherpunkte (asyncAfter) und Timer stoßen die Tests deshalb selbst an.
+  Den Dateinamen camunda.cfg.xml sucht die ProcessEngineExtension von sich aus.
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+  <bean id="processEngineConfiguration" class="org.cibseven.bpm.engine.impl.cfg.StandaloneInMemProcessEngineConfiguration">
+    <property name="jdbcUrl" value="jdbc:h2:mem:prozesstest;DB_CLOSE_DELAY=1000" />
+    <property name="jobExecutorActivate" value="false" />
+    <!-- hasPassed und hasNotPassed lesen die Historie -->
+    <property name="history" value="full" />
+  </bean>
+
+</beans>

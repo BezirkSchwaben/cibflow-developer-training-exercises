@@ -137,7 +137,7 @@ Authorization: Basic {{worker}}:{{worker}}
 ### B1. Bonus Kapitel 12, fachlicher Fehler: Variante deployen
 # prozess/varianten/verbuchen-fehlerpfad.bpmn hat am Service Task "Genehmigung verbuchen"
 # ein Error-Boundary für BUCHUNG_ABGELEHNT, das zu "Buchung klären" führt. Die Vorlage hat keins.
-# Gleich wirkt: dotnet run --project src/GenehmigungWorker -- deploy prozess/varianten/verbuchen-fehlerpfad.bpmn
+# Gleich wirkt im Ordner worker/: dotnet run --project src/GenehmigungWorker -- deploy prozess/varianten/verbuchen-fehlerpfad.bpmn
 POST {{baseUrl}}/deployment/create
 Authorization: Basic {{worker}}:{{worker}}
 Content-Type: multipart/form-data; boundary=GrenzeVariante
