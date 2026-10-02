@@ -12,17 +12,17 @@ Den Code für diese Übung bekommt ihr fertig. Ihr schreibt hier noch nichts, ih
 
 | Datei | Was drinsteht | Folie |
 |---|---|---|
-| `src/GenehmigungWorker/appsettings.json` | `EngineUrl`, `ProzessKey`, `Topic`, `WorkerId` | Projektstruktur für den C#-Worker |
-| `src/GenehmigungWorker/Einstellungen.cs` | liest `appsettings.json`, User Secrets und Umgebung, baut den `HttpClient` | |
-| `src/GenehmigungWorker/ExternalTaskClient.cs` | `FetchAndLockAsync`, `CompleteAsync`, `FailureAsync` und der Record `ExternalTask` | fetchAndLock in C#, complete und failure |
-| `src/GenehmigungWorker/Deploy.cs` | spielt `prozess/genehmigungsworkflow.bpmn` per Multipart-Request ein | Deployment aus der IDE |
-| `src/GenehmigungWorker/Program.cs` | Skeleton-Schleife: holt Tasks und loggt sie, schickt aber kein `complete` | |
+| `worker/src/GenehmigungWorker/appsettings.json` | `EngineUrl`, `ProzessKey`, `Topic`, `WorkerId` | Projektstruktur für den C#-Worker |
+| `worker/src/GenehmigungWorker/Einstellungen.cs` | liest `appsettings.json`, User Secrets und Umgebung, baut den `HttpClient` | |
+| `worker/src/GenehmigungWorker/ExternalTaskClient.cs` | `FetchAndLockAsync`, `CompleteAsync`, `FailureAsync` und der Record `ExternalTask` | fetchAndLock in C#, complete und failure |
+| `worker/src/GenehmigungWorker/Deploy.cs` | spielt `prozess/genehmigungsworkflow.bpmn` per Multipart-Request ein | Deployment aus der IDE |
+| `worker/src/GenehmigungWorker/Program.cs` | Skeleton-Schleife: holt Tasks und loggt sie, schickt aber kein `complete` | |
 
 Ihr braucht Docker Desktop mit mindestens 8 GB Speicher für Docker (wo ihr das unter macOS und Windows einstellt, steht in [stack/README.md](../stack/README.md#voraussetzungen)), die Zugangsdaten für `harbor.cib.de` aus der Setup-Mail, das .NET SDK 10, Git und VS Code, für den Prozesstest in Java in Kapitel 12 außerdem JDK 21. Die Ports 8080, 7083, 7086 und 7088 bis 7091 müssen frei sein.
 
 ## Das macht ihr
 
-Alle Befehle laufen im Repo-Root, außer es steht etwas anderes dabei. Wo sich bash (auch zsh und Git Bash) und PowerShell unterscheiden, stehen beide Varianten da.
+Die Befehle für den Stack laufen im Ordner `stack/`, alle `dotnet`-Befehle ab Schritt 5 im Ordner `worker/`. Wechselt ihr den Ordner, steht es beim Schritt. Wo sich bash (auch zsh und Git Bash) und PowerShell unterscheiden, stehen beide Varianten da.
 
 ### 1. Werkzeuge prüfen
 
@@ -55,7 +55,7 @@ Beim ersten Start lädt Docker sieben CIB-flow-Images von `harbor.cib.de` und zw
 
 Geht danach zurück in den Repo-Root: `cd ..`
 
-Während ihr wartet, lest `ExternalTaskClient.cs` und `Deploy.cs`. Ihr findet dort den Code von den Folien wieder. Habt ihr den Prozesstest in Java noch nie gestartet, lasst ihn jetzt einmal laufen, damit Maven und die Bibliotheken für Kapitel 12 da sind: im Repo-Root `cd java-prozesstest`, dann `./mvnw test` (PowerShell: `.\mvnw.cmd test`) und `cd ..`. Erwartet sind 1 bestandener und 3 übersprungene Tests. Konten, Adressen und Probleme mit dem Stack stehen in [stack/README.md](../stack/README.md).
+Während ihr wartet, lest `ExternalTaskClient.cs` und `Deploy.cs`. Ihr findet dort den Code von den Folien wieder. Habt ihr den Prozesstest in Java noch nie gestartet, lasst ihn jetzt einmal laufen, damit Maven und die Bibliotheken für Kapitel 12 da sind: im Repo-Root `cd prozesstest-java`, dann `./mvnw test` (PowerShell: `.\mvnw.cmd test`) und `cd ..`. Erwartet sind 1 bestandener und 3 übersprungene Tests. Konten, Adressen und Probleme mit dem Stack stehen in [stack/README.md](../stack/README.md).
 
 ### 3. Anmelden
 
@@ -88,14 +88,15 @@ Mit eurem eigenen Projekt prüft ihr zusätzlich:
 ### 5. Bauen
 
 ```bash
+cd worker
 dotnet build
 ```
 
-Der Build baut Worker und Tests und endet ohne Fehler und ohne Warnungen.
+Im Ordner `worker/` liegen die Solution `GenehmigungWorker.sln`, der Worker unter `src/` und die Tests unter `tests/`. Bleibt ab jetzt in diesem Ordner: Alle `dotnet`-Befehle dieser Übung und aus Kapitel 12 laufen hier. Der Build baut Worker und Tests und endet ohne Fehler und ohne Warnungen.
 
 ### 6. appsettings.json prüfen und Zugangsdaten setzen
 
-Mit der Vorlage passt `src/GenehmigungWorker/appsettings.json` schon:
+Mit der Vorlage passt `worker/src/GenehmigungWorker/appsettings.json` schon:
 
 | Schlüssel | Wert | Wann ihr ihn ändert |
 |---|---|---|
@@ -107,7 +108,7 @@ Mit der Vorlage passt `src/GenehmigungWorker/appsettings.json` schon:
 Die Zugangsdaten für `/engine-rest` gehören nicht in diese Datei. Lokal nehmt ihr den Benutzer `worker` mit Passwort `worker`. Am bequemsten sind User Secrets: Sie liegen in eurem Benutzerprofil, nicht im Repo, und gelten in jedem Terminal. Ihr braucht gleich zwei Terminals.
 
 ```bash
-# bash und PowerShell gleich
+# im Ordner worker/, bash und PowerShell gleich
 dotnet user-secrets set EngineBenutzer worker --project src/GenehmigungWorker
 dotnet user-secrets set EnginePasswort worker --project src/GenehmigungWorker
 dotnet user-secrets list --project src/GenehmigungWorker    # zeigt beide Werte
@@ -125,7 +126,7 @@ export EngineBenutzer=worker EnginePasswort=worker
 $env:EngineBenutzer = "worker"; $env:EnginePasswort = "worker"
 ```
 
-Fehlen sie, bricht der Worker mit einer Meldung ab, die genau diese Befehle nennt. Der Worker liest in der Reihenfolge `appsettings.json`, User Secrets, Umgebungsvariablen, der spätere Wert gewinnt. So überschreibt ihr jeden Wert für einen Lauf, etwa für eine zweite Instanz: in bash `WorkerId=genehmigung-worker-2 dotnet run --project src/GenehmigungWorker`, in PowerShell `$env:WorkerId = "genehmigung-worker-2"; dotnet run --project src/GenehmigungWorker`. Der Prozesstest in Kapitel 12 liest dieselbe Konfiguration, auch dieselben User Secrets.
+Fehlen sie, bricht der Worker mit einer Meldung ab, die genau diese Befehle nennt. Der Worker liest in der Reihenfolge `appsettings.json`, User Secrets, Umgebungsvariablen, der spätere Wert gewinnt. So überschreibt ihr jeden Wert für einen Lauf, etwa für eine zweite Instanz in einem weiteren Terminal im Ordner `worker/`: in bash `WorkerId=genehmigung-worker-2 dotnet run --project src/GenehmigungWorker`, in PowerShell `$env:WorkerId = "genehmigung-worker-2"; dotnet run --project src/GenehmigungWorker`. Der Prozesstest in Kapitel 12 liest dieselbe Konfiguration, auch dieselben User Secrets.
 
 ### 7. Worker starten
 
@@ -199,7 +200,7 @@ Strg+C im Terminal des Workers. Er meldet `Worker beendet.` Die Instanz wartet w
 - `betrag` kommt aus dem easyForm als Text, immer mit Punkt und mit so vielen Nachkommastellen, wie ihr eingebt, etwa `"1234.50"`. Das gilt auch, wenn das Feld vom Typ „Zahl“ ist. Startet ihr per REST, etwa mit der http-Datei, kommt eine Zahl an. Wie der Handler mit beidem umgeht, steht in [Kapitel 12](kapitel-12-worker-und-tests.md#1-handler-schreiben).
 - Einen Business Key setzt das Startformular nicht, deshalb loggt der Worker `Business Key (keiner)`. Warum das in Kapitel 12 wichtig wird, zeigt die Folie „Der Handler“.
 - Der easyForm-Baustein setzt nach dem Start-Event und nach „Antrag prüfen“ je einen Speicherpunkt („Asynchronous continuations: After“). Die Engine antwortet dort schon, den Rest führt ihr Job Executor Sekundenbruchteile später aus. Die Aufgabe oder der External Task erscheinen deshalb einen Moment nach dem Klick.
-- Ändert ihr das Modell im Repo, spielt ihr es mit `dotnet run --project src/GenehmigungWorker -- deploy` ein. Direkt nach dem Import legt das erste `deploy` auch bei unverändertem Modell Version 2 an: Das Prozessmanagement stellt mit eigener Quelle und unter einem anderen Dateinamen bereit, deshalb erkennt der Duplikatfilter der Engine das Modell nicht wieder. Das schadet nicht, die easyForms bleiben verknüpft. Ab dem zweiten Aufruf meldet es `Modell unverändert, die Engine hat keine neue Version angelegt.` `deploy` sucht `prozess/genehmigungsworkflow.bpmn` vom aktuellen Ordner aus nach oben und danach vom Programmordner aus, klappt also im Repo-Root, im Projektordner und aus der IDE. Weicht die Process ID des Modells von `ProzessKey` ab, weist `deploy` darauf hin. Die easyForms bringt `deploy` nicht mit, die kommen nur mit dem Projekt-ZIP.
+- Ändert ihr das Modell im Repo, spielt ihr es im Ordner `worker/` mit `dotnet run --project src/GenehmigungWorker -- deploy` ein. Direkt nach dem Import legt das erste `deploy` auch bei unverändertem Modell Version 2 an: Das Prozessmanagement stellt mit eigener Quelle und unter einem anderen Dateinamen bereit, deshalb erkennt der Duplikatfilter der Engine das Modell nicht wieder. Das schadet nicht, die easyForms bleiben verknüpft. Ab dem zweiten Aufruf meldet es `Modell unverändert, die Engine hat keine neue Version angelegt.` `deploy` sucht `prozess/genehmigungsworkflow.bpmn` vom aktuellen Ordner aus nach oben und danach vom Programmordner aus, klappt also im Ordner `worker/`, im Projektordner `worker/src/GenehmigungWorker` und aus der IDE. Weicht die Process ID des Modells von `ProzessKey` ab, weist `deploy` darauf hin. Die easyForms bringt `deploy` nicht mit, die kommen nur mit dem Projekt-ZIP.
 - Solange euer Worker läuft, holt er auch die Tasks, die ihr mit der http-Datei (Schritte 6 und 7) oder dem Smoke-Test holen wollt. Stoppt ihn vorher mit Strg+C. Seine letzte Long-Polling-Anfrage bleibt in der Engine noch bis zu zehn Sekunden offen und kann in dieser Zeit einen neuen Task sperren, dann für 30 Sekunden. Wartet deshalb nach dem Stoppen gut zehn Sekunden.
 
 ## Durchlauf mit der http-Datei
@@ -222,7 +223,7 @@ Spätere Requests lesen IDs aus den Antworten früherer Requests (`# @name`). Sc
 
 ## Typische Stolpersteine
 
-Die `docker compose`-Befehle in dieser Tabelle laufen im Ordner `stack/`.
+Die `docker compose`-Befehle in dieser Tabelle laufen im Ordner `stack/`, die `dotnet`-Befehle im Ordner `worker/`.
 
 | Was ihr seht | Woran es liegt, was ihr tut |
 |---|---|
@@ -230,13 +231,13 @@ Die `docker compose`-Befehle in dieser Tabelle laufen im Ordner `stack/`.
 | `docker compose up -d` meldet `port is already allocated` | Ein Port ist belegt. Lösung in [stack/README.md](../stack/README.md#typische-probleme). |
 | Weboberfläche oder REST-API antworten nicht | Der Stack startet noch. Wartet, bis `docker compose logs init` mit `[init] Fertig.` endet. |
 | `init` steht auf `Exited (1)` | `docker compose logs init` nennt den Grund. Ein weiteres `docker compose up -d` startet `init` noch einmal. |
-| `docker compose logs init` zeigt `illegal option -` | Das Skript hat Windows-Zeilenenden (CRLF). `.gitattributes` sorgt beim Klonen für LF. Hat ein Editor die Datei mit CRLF gespeichert: in VS Code unten rechts `CRLF` auf `LF` umstellen, speichern, `docker compose up -d`. Oder `git checkout -- stack/init/benutzer-anlegen.sh`. |
+| `docker compose logs init` zeigt `illegal option -` | Das Skript hat Windows-Zeilenenden (CRLF). `.gitattributes` sorgt beim Klonen für LF. Hat ein Editor die Datei mit CRLF gespeichert: in VS Code unten rechts `CRLF` auf `LF` umstellen, speichern, `docker compose up -d`. Oder im Repo-Root `git checkout -- stack/init/benutzer-anlegen.sh`. |
 | Der Worker bricht sofort ab: `Zugangsdaten für die Engine fehlen` | Schritt 6 fehlt, oder ihr habt Umgebungsvariablen in einem anderen Terminal gesetzt. User Secrets gelten überall. |
 | Der Worker endet mit `Response status code does not indicate success: 401 (Unauthorized).` | Benutzer oder Passwort falsch. `dotnet user-secrets list --project src/GenehmigungWorker` zeigt, was gesetzt ist. |
 | Der Worker endet mit `HttpRequestException` und `Connection refused` (Windows: `actively refused it` oder `Zielcomputer die Verbindung verweigerte`) | Die Engine läuft nicht, oder `EngineUrl` zeigt woandershin. |
 | Die Kachel „Prozess starten“ fehlt, oder „Genehmigungsworkflow“ ist nicht dabei | Das Projekt ist nicht importiert oder nicht bereitgestellt. Schritt 4. |
 | „Prozess starten“ meldet „Das Formular wurde nicht gefunden“ | Das Modell ist in der Engine, die easyForms fehlen, etwa nach einem `deploy` ohne Import. Importiert das Projekt-ZIP, Schritt 4. |
-| `deploy` meldet `prozess/genehmigungsworkflow.bpmn nicht gefunden` | Ihr startet außerhalb des Repos. Startet im Repo-Root oder in `src/GenehmigungWorker`. |
+| `deploy` meldet `prozess/genehmigungsworkflow.bpmn nicht gefunden` | Ihr startet außerhalb des Repos. Startet im Ordner `worker/` oder in `worker/src/GenehmigungWorker`. |
 | Die Instanz steht bei „Genehmigung verbuchen“, der Worker loggt nichts | Tippfehler im Topic, in `appsettings.json` oder im Modell. Der `curl`-Befehl aus Schritt 9 ohne `?topicName=...` zeigt alle wartenden External Tasks mit ihrem `topicName`. |
 | „Antrag prüfen“ fehlt in „Aufgaben bearbeiten“ | Als `gerda` angemeldet? Filter „Aufgaben meiner Gruppen“ gewählt? Mit eigenem Modell: Geht die Aufgabe an die Gruppe `genehmiger`? |
 | Das Formular von „Antrag prüfen“ ist ausgegraut | Darüber steht „Aufgabe ist Ihnen nicht zugewiesen“. „Mir zuweisen“ klicken. |
@@ -250,7 +251,7 @@ Weitere Probleme rund um den Stack stehen in [stack/README.md](../stack/README.m
 
 Verkürzt die Lock-Dauer und beobachtet, wann der Task erneut kommt:
 
-1. In `src/GenehmigungWorker/ExternalTaskClient.cs` in `FetchAndLockAsync` `lockDuration = 30_000` auf `10_000` setzen.
+1. In `worker/src/GenehmigungWorker/ExternalTaskClient.cs` in `FetchAndLockAsync` `lockDuration = 30_000` auf `10_000` setzen.
 2. Worker neu starten. Der wartende Task aus Schritt 8 kommt, sobald der alte Lock abgelaufen ist, danach alle zehn Sekunden erneut.
 3. Wieder auf `30_000` zurückstellen.
 

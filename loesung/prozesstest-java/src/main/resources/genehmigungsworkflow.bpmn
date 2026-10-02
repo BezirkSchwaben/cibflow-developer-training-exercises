@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Genehmigungsworkflow, Vorlage für den Entwickler-Track.
+
+  Gleiche IDs, gleiches Layout und gleiche Logik wie das Modell der Schulung
+  (camunda:initiator="antragsteller", Topic genehmigung-verbuchen, Platzhalter
+  an den Send Tasks). Die Formulare hängen über den CIB-Baustein "CIB easyForm"
+  (im Modeler: Vorlage, Auswählen) am Modell: das easyForm antragsformular am
+  Start-Event, genehmigungsformular an "Antrag prüfen". Wie der Baustein setzen
+  beide einen Speicherpunkt danach (camunda:asyncAfter).
+
+  Die Formulare selbst liegen nicht im BPMN. Sie kommen mit dem Projekt-ZIP
+  prozess/genehmigungsworkflow-projekt.zip ins Prozessmanagement.
+
+  Die Process ID Process_Genehmigung ist die der Vorlage. In der Schulung
+  ersetzt ihr diese Datei durch euer eigenes Modell mit eurem Key.
+-->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Definitions_Genehmigungsworkflow"
+                  targetNamespace="https://miragon.io/schulung/genehmigungsworkflow"
+                  exporter="Miragon"
+                  exporterVersion="1.0">
+
+  <bpmn:message id="Message_AntragZurueckgezogen" name="antrag-zurueckgezogen" />
+
+  <bpmn:collaboration id="Collaboration_Genehmigung">
+    <bpmn:participant id="Participant_Genehmigung" name="Genehmigungsworkflow" processRef="Process_Genehmigung" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Genehmigung" name="Genehmigungsworkflow" isExecutable="true" camunda:versionTag="1.0" camunda:historyTimeToLive="P365D">
+    <bpmn:startEvent id="StartEvent_Antrag" name="Antrag eingereicht" camunda:modelerTemplate="start-event-easy-form-json-5.4.2" camunda:asyncAfter="true" camunda:formKey="embedded:/camunda/app/tasklist/ui-element-templates/startform/template.html?template=easy-form-template" camunda:initiator="antragsteller">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="easyStartFormName" type="string" defaultValue="antragsformular" />
+        </camunda:formData>
+        <camunda:field name="easyStartFormId">
+          <camunda:string>easyStartFormId</camunda:string>
+        </camunda:field>
+        <camunda:field name="easyStartFormName">
+          <camunda:string>easyStartFormName</camunda:string>
+        </camunda:field>
+        <camunda:field name="easyStartFormVersion">
+          <camunda:string>easyStartFormVersion</camunda:string>
+        </camunda:field>
+        <camunda:field name="formularStartContent">
+          <camunda:string>formularStartContent</camunda:string>
+        </camunda:field>
+        <camunda:properties>
+          <camunda:property name="documentation" value="Mit diesem Element Template wird zum Prozessstart ein Easy Form Formular eingebunden." />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:outgoing>Flow_Start_Pruefen</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="Task_Pruefen" name="Antrag prüfen" camunda:modelerTemplate="user-task-easy-form-json-3.0.1" camunda:asyncAfter="true" camunda:formKey="embedded:/camunda/app/tasklist/ui-element-templates/template.html" camunda:candidateGroups="genehmiger">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="formReference">easy-form-template</camunda:inputParameter>
+          <camunda:inputParameter name="easyFormPresetValues" />
+          <camunda:inputParameter name="easyFormPresetVariables" />
+          <camunda:inputParameter name="dropdownChoice">yes</camunda:inputParameter>
+          <camunda:inputParameter name="easyFormName">genehmigungsformular</camunda:inputParameter>
+        </camunda:inputOutput>
+        <camunda:properties>
+          <camunda:property name="documentation" value="Einbindung von CIB easy-forms in Prozessen." />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Start_Pruefen</bpmn:incoming>
+      <bpmn:incoming>Flow_Nachbessern_Pruefen</bpmn:incoming>
+      <bpmn:outgoing>Flow_Pruefen_Gateway</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:boundaryEvent id="Boundary_Timer" name="3 Tage ohne Entscheidung" cancelActivity="false" attachedToRef="Task_Pruefen">
+      <bpmn:outgoing>Flow_Timer_Erinnern</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_1">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">P3D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+
+    <bpmn:sendTask id="Task_Erinnern" name="Erinnerung senden" camunda:expression="${execution.setVariable('erinnerungGesendet', true)}">
+      <bpmn:incoming>Flow_Timer_Erinnern</bpmn:incoming>
+      <bpmn:outgoing>Flow_Erinnern_End</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:endEvent id="End_Erinnert" name="Erinnert">
+      <bpmn:incoming>Flow_Erinnern_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:exclusiveGateway id="Gateway_Entscheidung" name="Entscheidung?">
+      <bpmn:incoming>Flow_Pruefen_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Genehmigt</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Abgelehnt</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Nachbesserung</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:serviceTask id="Task_Verbuchen" name="Genehmigung verbuchen" camunda:type="external" camunda:topic="genehmigung-verbuchen">
+      <bpmn:incoming>Flow_Genehmigt</bpmn:incoming>
+      <bpmn:outgoing>Flow_Verbuchen_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_Genehmigt" name="Antrag genehmigt">
+      <bpmn:incoming>Flow_Verbuchen_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sendTask id="Task_Ablehnen" name="Ablehnung mitteilen" camunda:expression="${execution.setVariable('ablehnungMitgeteilt', true)}">
+      <bpmn:incoming>Flow_Abgelehnt</bpmn:incoming>
+      <bpmn:outgoing>Flow_Ablehnen_End</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:endEvent id="End_Abgelehnt" name="Antrag abgelehnt">
+      <bpmn:incoming>Flow_Ablehnen_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:userTask id="Task_Nachbessern" name="Antrag nachbessern" camunda:assignee="${antragsteller}">
+      <bpmn:incoming>Flow_Nachbesserung</bpmn:incoming>
+      <bpmn:outgoing>Flow_Nachbessern_Pruefen</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:subProcess id="SubProcess_Ruecknahme" name="Rücknahme" triggeredByEvent="true">
+      <bpmn:startEvent id="StartEvent_Ruecknahme" name="Rücknahme eingegangen">
+        <bpmn:outgoing>Flow_Ruecknahme_Benachrichtigen</bpmn:outgoing>
+        <bpmn:messageEventDefinition id="MessageEventDefinition_Ruecknahme" messageRef="Message_AntragZurueckgezogen" />
+      </bpmn:startEvent>
+      <bpmn:sendTask id="Task_Benachrichtigen" name="Genehmigende Stelle benachrichtigen" camunda:expression="${execution.setVariable('stelleBenachrichtigt', true)}">
+        <bpmn:incoming>Flow_Ruecknahme_Benachrichtigen</bpmn:incoming>
+        <bpmn:outgoing>Flow_Benachrichtigen_End</bpmn:outgoing>
+      </bpmn:sendTask>
+      <bpmn:endEvent id="End_Zurueckgezogen" name="Antrag zurückgezogen">
+        <bpmn:incoming>Flow_Benachrichtigen_End</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_Ruecknahme_Benachrichtigen" sourceRef="StartEvent_Ruecknahme" targetRef="Task_Benachrichtigen" />
+      <bpmn:sequenceFlow id="Flow_Benachrichtigen_End" sourceRef="Task_Benachrichtigen" targetRef="End_Zurueckgezogen" />
+    </bpmn:subProcess>
+
+    <bpmn:sequenceFlow id="Flow_Start_Pruefen" sourceRef="StartEvent_Antrag" targetRef="Task_Pruefen" />
+    <bpmn:sequenceFlow id="Flow_Pruefen_Gateway" sourceRef="Task_Pruefen" targetRef="Gateway_Entscheidung" />
+    <bpmn:sequenceFlow id="Flow_Genehmigt" name="genehmigt" sourceRef="Gateway_Entscheidung" targetRef="Task_Verbuchen">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${entscheidung == 'genehmigt'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Verbuchen_End" sourceRef="Task_Verbuchen" targetRef="End_Genehmigt" />
+    <bpmn:sequenceFlow id="Flow_Abgelehnt" name="abgelehnt" sourceRef="Gateway_Entscheidung" targetRef="Task_Ablehnen">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${entscheidung == 'abgelehnt'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Ablehnen_End" sourceRef="Task_Ablehnen" targetRef="End_Abgelehnt" />
+    <bpmn:sequenceFlow id="Flow_Nachbesserung" name="Nachbesserung nötig" sourceRef="Gateway_Entscheidung" targetRef="Task_Nachbessern">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${entscheidung == 'nachbessern'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Nachbessern_Pruefen" sourceRef="Task_Nachbessern" targetRef="Task_Pruefen" />
+    <bpmn:sequenceFlow id="Flow_Timer_Erinnern" sourceRef="Boundary_Timer" targetRef="Task_Erinnern" />
+    <bpmn:sequenceFlow id="Flow_Erinnern_End" sourceRef="Task_Erinnern" targetRef="End_Erinnert" />
+
+    <bpmn:textAnnotation id="Annotation_Worker">
+      <bpmn:text>External Task · C#-Worker</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_Worker" sourceRef="Task_Verbuchen" targetRef="Annotation_Worker" />
+
+    <bpmn:textAnnotation id="Annotation_Startform">
+      <bpmn:text>Startformular: Antrag</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_Startform" sourceRef="StartEvent_Antrag" targetRef="Annotation_Startform" />
+
+    <bpmn:textAnnotation id="Annotation_Taskform">
+      <bpmn:text>Task-Formular: Genehmigung</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_Taskform" sourceRef="Task_Pruefen" targetRef="Annotation_Taskform" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_Genehmigung">
+
+      <bpmndi:BPMNShape id="Participant_Genehmigung_di" bpmnElement="Participant_Genehmigung" isHorizontal="true">
+        <dc:Bounds x="130" y="60" width="980" height="570" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="StartEvent_Antrag_di" bpmnElement="StartEvent_Antrag">
+        <dc:Bounds x="212" y="262" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="185" y="305" width="90" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Nachbessern_di" bpmnElement="Task_Nachbessern">
+        <dc:Bounds x="570" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Pruefen_di" bpmnElement="Task_Pruefen">
+        <dc:Bounds x="330" y="240" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Boundary_Timer_di" bpmnElement="Boundary_Timer">
+        <dc:Bounds x="392" y="302" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="436" y="322" width="84" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Erinnern_di" bpmnElement="Task_Erinnern">
+        <dc:Bounds x="330" y="400" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="End_Erinnert_di" bpmnElement="End_Erinnert">
+        <dc:Bounds x="470" y="422" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="468" y="465" width="42" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_Entscheidung_di" bpmnElement="Gateway_Entscheidung" isMarkerVisible="true">
+        <dc:Bounds x="515" y="255" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="570" y="238" width="74" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Verbuchen_di" bpmnElement="Task_Verbuchen">
+        <dc:Bounds x="650" y="240" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="End_Genehmigt_di" bpmnElement="End_Genehmigt">
+        <dc:Bounds x="810" y="262" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="786" y="305" width="84" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Ablehnen_di" bpmnElement="Task_Ablehnen">
+        <dc:Bounds x="650" y="350" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="End_Abgelehnt_di" bpmnElement="End_Abgelehnt">
+        <dc:Bounds x="810" y="372" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="787" y="415" width="82" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Annotation_Worker_di" bpmnElement="Annotation_Worker">
+        <dc:Bounds x="910" y="240" width="170" height="40" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Annotation_Startform_di" bpmnElement="Annotation_Startform">
+        <dc:Bounds x="200" y="180" width="140" height="34" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Annotation_Taskform_di" bpmnElement="Annotation_Taskform">
+        <dc:Bounds x="190" y="400" width="120" height="50" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="SubProcess_Ruecknahme_di" bpmnElement="SubProcess_Ruecknahme" isExpanded="true">
+        <dc:Bounds x="560" y="460" width="320" height="140" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="StartEvent_Ruecknahme_di" bpmnElement="StartEvent_Ruecknahme">
+        <dc:Bounds x="590" y="522" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="563" y="565" width="90" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Benachrichtigen_di" bpmnElement="Task_Benachrichtigen">
+        <dc:Bounds x="666" y="500" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="End_Zurueckgezogen_di" bpmnElement="End_Zurueckgezogen">
+        <dc:Bounds x="806" y="522" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="779" y="565" width="90" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_Start_Pruefen_di" bpmnElement="Flow_Start_Pruefen">
+        <di:waypoint x="248" y="280" />
+        <di:waypoint x="330" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Pruefen_Gateway_di" bpmnElement="Flow_Pruefen_Gateway">
+        <di:waypoint x="430" y="280" />
+        <di:waypoint x="515" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Genehmigt_di" bpmnElement="Flow_Genehmigt">
+        <di:waypoint x="565" y="280" />
+        <di:waypoint x="650" y="280" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="582" y="262" width="52" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Verbuchen_End_di" bpmnElement="Flow_Verbuchen_End">
+        <di:waypoint x="750" y="280" />
+        <di:waypoint x="810" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Abgelehnt_di" bpmnElement="Flow_Abgelehnt">
+        <di:waypoint x="540" y="305" />
+        <di:waypoint x="540" y="390" />
+        <di:waypoint x="650" y="390" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="548" y="340" width="50" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Ablehnen_End_di" bpmnElement="Flow_Ablehnen_End">
+        <di:waypoint x="750" y="390" />
+        <di:waypoint x="810" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Nachbesserung_di" bpmnElement="Flow_Nachbesserung">
+        <di:waypoint x="540" y="255" />
+        <di:waypoint x="540" y="150" />
+        <di:waypoint x="570" y="150" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="450" y="185" width="80" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Nachbessern_Pruefen_di" bpmnElement="Flow_Nachbessern_Pruefen">
+        <di:waypoint x="570" y="110" />
+        <di:waypoint x="380" y="110" />
+        <di:waypoint x="380" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Timer_Erinnern_di" bpmnElement="Flow_Timer_Erinnern">
+        <di:waypoint x="410" y="338" />
+        <di:waypoint x="410" y="400" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Erinnern_End_di" bpmnElement="Flow_Erinnern_End">
+        <di:waypoint x="430" y="440" />
+        <di:waypoint x="470" y="440" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Association_Worker_di" bpmnElement="Association_Worker">
+        <di:waypoint x="750" y="250" />
+        <di:waypoint x="910" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Startform_di" bpmnElement="Association_Startform">
+        <di:waypoint x="230" y="262" />
+        <di:waypoint x="240" y="214" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Taskform_di" bpmnElement="Association_Taskform">
+        <di:waypoint x="345" y="320" />
+        <di:waypoint x="290" y="400" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Ruecknahme_Benachrichtigen_di" bpmnElement="Flow_Ruecknahme_Benachrichtigen">
+        <di:waypoint x="626" y="540" />
+        <di:waypoint x="666" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Benachrichtigen_End_di" bpmnElement="Flow_Benachrichtigen_End">
+        <di:waypoint x="766" y="540" />
+        <di:waypoint x="806" y="540" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

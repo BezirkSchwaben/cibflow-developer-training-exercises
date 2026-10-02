@@ -1,13 +1,15 @@
 # Prüft das Übungs-Repo bei jedem Push und Pull Request auf main.
 #
-#   startstand          Der Startstand (Ende der Übung in Kapitel 11) baut, und seine Tests laufen durch.
-#                       Die Tests mit TODO sind übersprungen, nicht rot. Dazu: Das Projekt-ZIP passt zum Modell.
-#   musterloesung       Übernimmt die Musterlösung aus loesung/ mit dem Befehl aus dem Aufgabenblatt und prüft sie:
+#   startstand          Der Startstand unter worker/ (Ende der Übung in Kapitel 11) baut, und seine Tests laufen durch.
+#                       Die Tests mit TODO sind übersprungen, nicht rot. Dazu: Das Projekt-ZIP passt zum Modell,
+#                       und die Musterlösung unter loesung/ ist vollständig und weicht nur in den Übungsdateien
+#                       vom Startstand ab (.github/scripts/loesung-abgleich.sh).
+#   musterloesung       Die Musterlösung unter loesung/worker/, ein vollständiges Projekt:
 #                       Build, Unit-Tests ohne Engine, Engine per Docker Compose,
 #                       Deployment mit "dotnet run -- deploy", Smoke-Test und die Prozesstests gegen die Engine.
-#   java-startstand     Der Prozesstest in Java unter java-prozesstest/: Die Modellkopien sind byte-gleich zu Vorlage
+#   java-startstand     Der Prozesstest in Java unter prozesstest-java/: Die Modellkopien sind byte-gleich zu Vorlage
 #                       und Variante, der Happy Path läuft grün, die drei TODO-Tests sind übersprungen, nicht rot.
-#   java-musterloesung  Übernimmt die Musterlösung aus loesung/java-prozesstest/ mit dem Befehl aus dem Aufgabenblatt:
+#   java-musterloesung  Die Musterlösung unter loesung/prozesstest-java/, ein vollständiges Projekt:
 #                       alle Tests grün, keiner übersprungen, der Bonus Fehlerpfad eingeschlossen.
 #                       Die Java-Jobs brauchen weder Docker noch Zugangsdaten, die Engine läuft im Speicher.
 #
@@ -57,10 +59,13 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Bauen
-        run: dotnet build GenehmigungWorker.sln
+        run: dotnet build worker/GenehmigungWorker.sln
 
       - name: Tests ausführen (die TODO-Tests sind übersprungen)
-        run: dotnet test GenehmigungWorker.sln --no-build --logger "console;verbosity=normal"
+        run: dotnet test worker/GenehmigungWorker.sln --no-build --logger "console;verbosity=normal"
+
+      - name: Musterlösung ist vollständig und weicht nur in den Übungsdateien ab
+        run: .github/scripts/loesung-abgleich.sh
 
       - name: Projekt-ZIP passt zum Modell
         run: |
@@ -92,14 +97,11 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Musterlösung übernehmen
-        run: cp -R loesung/src loesung/tests .
-
       - name: Bauen
-        run: dotnet build GenehmigungWorker.sln
+        run: dotnet build loesung/worker/GenehmigungWorker.sln
 
       - name: Unit-Tests ohne Engine und ohne Zugangsdaten
-        run: dotnet test GenehmigungWorker.sln --no-build --filter "Kategorie!=Prozesstest" --logger "console;verbosity=normal"
+        run: dotnet test loesung/worker/GenehmigungWorker.sln --no-build --filter "Kategorie!=Prozesstest" --logger "console;verbosity=normal"
 
       - name: Engine starten (CIB seven, siehe oben)
         working-directory: .github/ci-stack
@@ -134,7 +136,7 @@ jobs:
           EnginePasswort: worker
         run: |
           # Erstes Deployment auf dem frischen Stack: Deploy.cs muss eine neue Version anlegen
-          dotnet run --project src/GenehmigungWorker --no-build -- deploy | tee deploy.log
+          dotnet run --project loesung/worker/src/GenehmigungWorker --no-build -- deploy | tee deploy.log
           grep -q "Neue Version: Process_Genehmigung, Version 1" deploy.log
 
       - name: Smoke-Test (Anmeldung, Deployment, alle drei Pfade per REST)
@@ -145,7 +147,7 @@ jobs:
         env:
           EngineBenutzer: worker
           EnginePasswort: worker
-        run: dotnet test GenehmigungWorker.sln --no-build --filter "Kategorie=Prozesstest" --logger "console;verbosity=normal"
+        run: dotnet test loesung/worker/GenehmigungWorker.sln --no-build --filter "Kategorie=Prozesstest" --logger "console;verbosity=normal"
 
       - name: Zustand der Engine bei Fehler
         if: failure()
@@ -165,7 +167,7 @@ jobs:
     timeout-minutes: 10
     defaults:
       run:
-        working-directory: java-prozesstest
+        working-directory: prozesstest-java
     steps:
       - name: Repo auschecken
         uses: actions/checkout@v7
@@ -174,14 +176,15 @@ jobs:
 
       - name: Modellkopien passen zu Vorlage und Variante
         run: |
-          # Die Demo in Kapitel 10 ändert das Modell nur vorübergehend. Im Repo müssen die Kopien byte-gleich bleiben.
+          # Der Test liest das Modell aus dem eigenen Projekt. Im Repo müssen die Kopien byte-gleich zur Vorlage bleiben.
+          # Die Kopien unter loesung/prozesstest-java/ prüft .github/scripts/loesung-abgleich.sh gegen diese hier.
           fehler=0
           for paar in "genehmigungsworkflow.bpmn:../prozess/genehmigungsworkflow.bpmn" \
                       "verbuchen-fehlerpfad.bpmn:../prozess/varianten/verbuchen-fehlerpfad.bpmn"; do
             kopie="src/main/resources/${paar%%:*}"
             vorlage="${paar#*:}"
             if ! cmp -s "$kopie" "$vorlage"; then
-              echo "::error::java-prozesstest/$kopie weicht von ${vorlage#../} ab. Nach der Demo zurücksetzen (git restore java-prozesstest) oder nach einer Änderung der Vorlage neu kopieren (cp ${vorlage#../} java-prozesstest/src/main/resources/)."
+              echo "::error::prozesstest-java/$kopie weicht von ${vorlage#../} ab. Nach einer Änderung der Vorlage neu kopieren: cp ${vorlage#../} prozesstest-java/src/main/resources/ und cp ${vorlage#../} loesung/prozesstest-java/src/main/resources/"
               fehler=1
             fi
           done
@@ -193,7 +196,7 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
-          cache-dependency-path: java-prozesstest/pom.xml
+          cache-dependency-path: prozesstest-java/pom.xml
 
       - name: Prozesstests ausführen (Engine im Speicher, die TODO-Tests sind übersprungen)
         run: ./mvnw -B -ntp test
@@ -221,14 +224,14 @@ jobs:
     name: Java-Prozesstest (Musterlösung)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: loesung/prozesstest-java
     steps:
       - name: Repo auschecken
         uses: actions/checkout@v7
         with:
           persist-credentials: false
-
-      - name: Musterlösung übernehmen
-        run: cp -R loesung/java-prozesstest/src java-prozesstest/
 
       - name: JDK 21 einrichten
         uses: actions/setup-java@v6
@@ -236,14 +239,12 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
-          cache-dependency-path: java-prozesstest/pom.xml
+          cache-dependency-path: loesung/prozesstest-java/pom.xml
 
       - name: Prozesstests ausführen (Engine im Speicher)
-        working-directory: java-prozesstest
         run: ./mvnw -B -ntp test
 
       - name: Kein Test übersprungen, Bonus Fehlerpfad dabei
-        working-directory: java-prozesstest
         run: |
           # Maven zählt übersprungene Tests nicht als Fehler. In der Musterlösung darf keiner übersprungen sein.
           grep -o '<testsuite [^>]*>' target/surefire-reports/TEST-*.xml
