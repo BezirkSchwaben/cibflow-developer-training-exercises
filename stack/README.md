@@ -2,6 +2,8 @@
 
 Dieser Ordner startet CIB flow auf eurem Laptop: die Engine, die Weboberfläche und die Werkzeuge (Modeler, easyForm, Prozessmanagement, Ressourcen). Nur für die Schulung, nicht produktiv verwenden.
 
+Ob auf eurem Rechner alles läuft, vom Startstand bis zur Musterlösung, prüft ihr mit dem [Setup-Check](SETUP-CHECK.md).
+
 ## Voraussetzungen
 
 - Docker braucht mindestens 8 GB Speicher, der Stack belegt im Leerlauf rund 5,5 GB. So stellt ihr das ein:
