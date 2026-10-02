@@ -83,7 +83,8 @@ cibflow-developer-training-exercises/
 │   ├── docker-compose.yml              # Engine, Weboberfläche, Werkzeuge, Benutzer-Init
 │   ├── config/                         # Konfiguration der CIB flow Dienste für die Schulung
 │   ├── init/benutzer-anlegen.sh        # legt anna, gerda, worker, die Gruppe genehmiger und zwei Filter an
-│   └── smoke-test.sh                   # Werkzeug für Trainer: prüft alle drei Pfade per REST
+│   ├── smoke-test.sh                   # Werkzeug für Trainer: prüft alle drei Pfade per REST
+│   └── SETUP-CHECK.md                  # prüft in fünf Schritten, ob das Repo auf einem Rechner läuft
 ├── prozess/
 │   ├── genehmigungsworkflow.bpmn       # Vorlage des Modells, Process ID Process_Genehmigung
 │   ├── genehmigungsworkflow-projekt.zip  # Projekt-ZIP zum Import, falls ihr kein eigenes habt
@@ -106,6 +107,8 @@ cibflow-developer-training-exercises/
 ```
 
 ## Für Trainer
+
+Ob das Repo auf einem Rechner läuft, prüft ihr in fünf Schritten mit dem [Setup-Check](stack/SETUP-CHECK.md): Startstand, CIB flow, Worker und Musterlösung.
 
 `stack/smoke-test.sh` prüft einen laufenden Stack per REST, mit allen drei Pfaden. Aufruf im Ordner `stack/` mit `./smoke-test.sh`, unter Windows in Git Bash mit `bash smoke-test.sh`. Stoppt vorher einen laufenden Worker. Mit `ENGINE_URL`, `PROZESS_KEY` und `BPMN` richtet ihr es auf eine andere Engine oder ein anderes Modell.
 
