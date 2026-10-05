@@ -21,7 +21,8 @@
   ],
   "remoteEnv": {
     "LC_ALL": "C.UTF-8",
-    "no_proxy": "*",
-    "NO_PROXY": "*"
+    "DOTNET_ENVIRONMENT": "devcontainer",
+    "no_proxy": "flow-cibseven-spring,flow-webclient,ui-element-template,easy-form,flow-modeler,flow-process-management,flow-resource,rechte,init",
+    "NO_PROXY": "flow-cibseven-spring,flow-webclient,ui-element-template,easy-form,flow-modeler,flow-process-management,flow-resource,rechte,init"
   }
-}curl
+}

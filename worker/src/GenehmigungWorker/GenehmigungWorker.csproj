@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="appsettings.devcontainer.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

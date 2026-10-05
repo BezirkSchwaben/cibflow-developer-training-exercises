@@ -31,10 +31,17 @@ public sealed class Einstellungen
 
     public static Einstellungen Laden()
     {
-        var konfiguration = new ConfigurationBuilder()
+        var builder = new ConfigurationBuilder()
             // appsettings.json liegt nach dem Build neben der DLL, egal wo ihr startet
             .SetBasePath(AppContext.BaseDirectory)
-            .AddJsonFile("appsettings.json", optional: false)
+            .AddJsonFile("appsettings.json", optional: false);
+
+        if (Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") == "devcontainer")
+        {
+            builder.AddJsonFile("appsettings.devcontainer.json", optional: false);
+        }
+
+        var konfiguration = builder
             .AddUserSecrets(typeof(Einstellungen).Assembly, optional: true)
             .AddEnvironmentVariables()
             .Build();
