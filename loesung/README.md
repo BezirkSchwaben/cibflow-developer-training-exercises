@@ -34,6 +34,8 @@ cd loesung/prozesstest-java
 ./mvnw test                                     # 10 bestandene Tests, in PowerShell: .\mvnw.cmd test
 ```
 
+Die Java-Tests `GenehmigungsworkflowTest` und `FehlerpfadTest` lesen Process ID, IDs, Topic und Fehlercode aus Klassen, die bpmn-to-code bei jedem Lauf aus den Modellkopien erzeugt, etwa `TASK_PRUEFEN.getValue()` statt `"Task_Pruefen"`. Wie das geht, steht in [prozesstest-java/README.md](../prozesstest-java/README.md#ids-aus-dem-modell). Die Demo-Klasse `GenehmigungsworkflowTag1Test` schreibt die IDs bewusst als Text, siehe [Demo](../prozesstest-java/README.md#demo-kapitel-10-trainer).
+
 Die User Secrets aus Übung 8 gelten auch hier, beide Worker-Projekte haben dieselbe `UserSecretsId`. Mit eigenem Projekt tragt ihr euren `ProzessKey` auch in `loesung/worker/src/GenehmigungWorker/appsettings.json` ein.
 
 ## Mit eurem Stand vergleichen

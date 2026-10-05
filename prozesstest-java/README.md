@@ -22,7 +22,7 @@ cd prozesstest-java
 .\mvnw.cmd -o test   # ab dem zweiten Lauf, ohne Netz
 ```
 
-Der erste Lauf lädt Maven und die Bibliotheken, rund 55 MB. Lasst ihn deshalb einmal vor der Schulung laufen. Danach dauert ein Lauf wenige Sekunden.
+Der erste Lauf lädt Maven und die Bibliotheken, rund 65 MB. Lasst ihn deshalb einmal vor der Schulung laufen. Danach dauert ein Lauf wenige Sekunden. Lief der Test bei euch schon vor bpmn-to-code (siehe [IDs aus dem Modell](#ids-aus-dem-modell)), lädt der erste Lauf nach dem `git pull` noch rund 11 MB nach. Ohne Netz meldet `./mvnw -o test` bis dahin `Cannot access central (https://repo.maven.apache.org/maven2) in offline mode`.
 
 Unter Windows können ✔, ✘, ↷ und „“ in der Konsole als Fragezeichen erscheinen. Dann vorher `chcp 65001` ausführen. Hilft das nicht, schaltet `.\mvnw.cmd test "-Dbaum.theme=ASCII"` den Baum auf `+--`, `[OK]`, `[XX]` und, für übersprungen, `[??]` um.
 
@@ -42,13 +42,52 @@ Klappt es bis zur Schulung nicht, schreibt ihr den Java-Teil zu zweit am Rechner
 - `src/main/resources/verbuchen-fehlerpfad.bpmn`: Kopie der Variante `prozess/varianten/verbuchen-fehlerpfad.bpmn` für den Bonus. Die CI prüft, dass beide Kopien byte-gleich zu ihren Quellen sind.
 - `src/test/java/io/miragon/schulung/genehmigung/GenehmigungsworkflowTest.java`: der Happy Path fertig, als Vorbild mit den fünf nummerierten Schritten der Folie. Ablehnung, Nachbesserung und Timer stehen als `TODO Kapitel 12, Schritt 5` mit `@Disabled` darunter, dazu die Hilfsmethoden `antragStarten` und `speicherpunktAnstossen`.
 - `src/test/resources/camunda.cfg.xml`: die Engine im Speicher, ohne Job Executor.
-- `.mvn/jvm.config`: stellt Maven leiser, übrig bleiben Testbaum, Meldungen und Fehler. Deshalb fehlen die Zeilen BUILD SUCCESS und BUILD FAILURE.
+- `pom.xml`: Engine und Testbibliotheken, dazu bpmn-to-code. Es erzeugt bei jedem Lauf aus den Modellen die Klassen mit den IDs, siehe [IDs aus dem Modell](#ids-aus-dem-modell).
+- `.mvn/jvm.config`: stellt Maven und bpmn-to-code leiser, übrig bleiben Testbaum, Meldungen und Fehler. Deshalb fehlen die Zeilen BUILD SUCCESS und BUILD FAILURE.
 
 Die Musterlösung liegt als vollständiges Projekt unter [`loesung/prozesstest-java/`](../loesung/prozesstest-java/), mit Maven Wrapper, `pom.xml` und denselben Modellkopien. Sie unterscheidet sich nur in den Tests: `GenehmigungsworkflowTest.java` mit allen vier Tests und, als Bonus, `FehlerpfadTest.java` für die Variante. Dazu kommen, nur für die Demo in Kapitel 10, `GenehmigungsworkflowTag1Test.java` und `genehmigungsworkflow-tag1.bpmn`. „Tag1“ steht dort für das Modell ohne External Task. Ihr startet sie im Repo-Root mit `cd loesung/prozesstest-java` und `./mvnw test` (PowerShell: `.\mvnw.cmd test`), nichts wird kopiert. Vergleichen könnt ihr im Repo-Root mit `git diff --no-index prozesstest-java/src/test/java loesung/prozesstest-java/src/test/java`.
 
 Speicherpunkte: Der Baustein „CIB easyForm“ setzt hinter „Antrag gestellt“, hinter „Antrag prüfen“ und, seit Übung 7, hinter „Antrag nachbessern“ je einen Speicherpunkt (`camunda:asyncAfter`). Ohne Job Executor stößt der Test alle drei selbst an (`speicherpunktAnstossen`, darin `execute(job(...))`), den Timer ebenso. Nach dem Abschließen von „Antrag prüfen“ entscheidet das Gateway also erst am Speicherpunkt. Die Aufgaben ohne Formular („Ablehnung mitteilen“, „Erinnerung senden“, „Genehmigende Stelle benachrichtigen“) haben keinen Speicherpunkt, nach `complete(task())` läuft die Engine dort sofort weiter.
 
 Timer: „3 Tage ohne Entscheidung“ steht im Modell fürs Training auf drei Minuten (`PT3M`). Der Test prüft deshalb eine Fälligkeit in drei Minuten und führt den Timer-Job gleich aus, statt zu warten.
+
+## IDs aus dem Modell
+
+Die Tests der Übung und des Bonus schreiben keine ID als Text. Process ID, Element-IDs, Topic und Fehlercode lesen sie aus Klassen, die [bpmn-to-code](https://github.com/Miragon/bpmn-to-code) von Miragon aus den Modellen erzeugt. Das Maven-Plugin läuft bei jedem `./mvnw test` vor dem Übersetzen der Tests, liest die Modelle in `src/main/resources/` und schreibt die Klassen neu nach `target/generated-test-sources/bpmn-to-code/`. Den Ordner leert Maven vorher, so bleibt keine Klasse eines alten Stands liegen. Im Repo stehen die Klassen nicht, von Hand ändert ihr sie nicht.
+
+| Modell | Klasse |
+|---|---|
+| `genehmigungsworkflow.bpmn` | `io.miragon.schulung.genehmigung.api.ProcessGenehmigungProcessApi` |
+| `verbuchen-fehlerpfad.bpmn` | `io.miragon.schulung.genehmigung.api.fehlerpfad.ProcessVerbuchenFehlerpfadProcessApi` |
+| `genehmigungsworkflow-tag1.bpmn`, nur in der Musterlösung | `io.miragon.schulung.genehmigung.api.tag1.ProcessGenehmigungProcessApi` |
+
+Die Demo-Klasse `GenehmigungsworkflowTag1Test` nutzt ihre Klasse nicht, sie schreibt die IDs als Text. Warum, steht unter [Demo](#demo-kapitel-10-trainer), Variante A.
+
+Aus jeder ID im Modell wird eine Konstante in `Elements`: aus `Task_Pruefen` wird `TASK_PRUEFEN`, aus `StartEvent_Antrag` wird `START_EVENT_ANTRAG`. Dazu kommen `PROCESS_ID`, das Topic als `ServiceTasks.GENEHMIGUNG_VERBUCHEN` und in der Variante der Fehlercode als `Errors.BUCHUNG_ABGELEHNT`. Der Test importiert sie statisch, mit `Elements.*` alle IDs auf einmal:
+
+```java
+import static io.miragon.schulung.genehmigung.api.ProcessGenehmigungProcessApi.Elements.*;
+import static io.miragon.schulung.genehmigung.api.ProcessGenehmigungProcessApi.ServiceTasks.GENEHMIGUNG_VERBUCHEN;
+
+speicherpunktAnstossen(antrag, START_EVENT_ANTRAG);
+assertThat(antrag).isWaitingAtExactly(TASK_PRUEFEN.getValue());
+assertThat(antrag).externalTask().hasTopicName(GENEHMIGUNG_VERBUCHEN);
+```
+
+Eine ID ist vom Typ `ElementId`, die Prüfungen der Engine erwarten Text. Deshalb schreibt ihr `TASK_PRUEFEN.getValue()`, nur die Hilfsmethode `speicherpunktAnstossen` nimmt die Konstante selbst. Ebenso liefert `PROCESS_ID.getValue()` die Process ID und `BUCHUNG_ABGELEHNT.getCode()` den Fehlercode, das Topic `GENEHMIGUNG_VERBUCHEN` ist schon Text. Variablennamen wie `entscheidung` und `buchungsnummer` bleiben Text: Das Modell legt sie nicht als Ein- oder Ausgabe fest, deshalb erzeugt bpmn-to-code für sie keine Konstanten.
+
+Ändert jemand eine ID im Modell, heißt beim nächsten Lauf auch die Konstante anders, und Maven übersetzt den Test nicht mehr. Die Meldung nennt jede Zeile, die noch die alte ID nutzt. Mit `Task_Pruefen2` statt `Task_Pruefen` im Startstand:
+
+```
+[ERROR] COMPILATION ERROR :
+[ERROR] .../GenehmigungsworkflowTest.java:[65,47] Symbol nicht gefunden
+  Symbol: Variable TASK_PRUEFEN
+  Ort: Klasse io.miragon.schulung.genehmigung.GenehmigungsworkflowTest
+```
+
+Englisch heißt das `cannot find symbol`. Die neue Konstante heißt `TASK_PRUEFEN_2`. Alle Namen stehen in der erzeugten Datei, etwa `target/generated-test-sources/bpmn-to-code/io/miragon/schulung/genehmigung/api/ProcessGenehmigungProcessApi.java`, Abschnitt `Elements`. Eure IDE kennt die Klassen erst nach dem ersten `./mvnw test`, ladet danach das Maven-Projekt neu.
+
+Weil Maven die Klassen bei jedem Lauf neu erzeugt, steht über dem Testbaum jedes Mal eine Zeile `Compiling 3 source files with javac ...`, in der Musterlösung `Compiling 6 source files ...`. Je Modell gibt es eine eigene Ausführung des Plugins mit eigenem Paket: `genehmigungsworkflow.bpmn` und `genehmigungsworkflow-tag1.bpmn` tragen dieselbe Process ID und ergäben im selben Paket dieselbe Klasse. Im Startstand fehlt `genehmigungsworkflow-tag1.bpmn`, seine Ausführung erzeugt dann nichts.
 
 ## Übung 9 (Kapitel 12)
 
@@ -120,7 +159,7 @@ Das Modell zeigt ihr in VS Code mit der Erweiterung Miragon BPMN Modeler, danebe
    ```
    GenehmigungsworkflowTag1Test.genehmigterAntragWirdVerbucht:55 Expecting ProcessInstance {id='8', processDefinitionId='Process_Genehmigung:1:3', businessKey='Antrag-1'} to be waiting at exactly [Task_Pruefen], but it is actually waiting at [Task_Pruefen2].
    ```
-   Darunter steht `Tests run: 4, Failures: 4, Errors: 0, Skipped: 0`.
+   Darunter steht `Tests run: 4, Failures: 4, Errors: 0, Skipped: 0`. Genau dafür schreibt die Demo-Klasse die IDs als Text: Der Test übersetzt, läuft an und wird erst beim Prüfen rot. Mit den Konstanten aus bpmn-to-code, wie in Übung 9, fiele dieselbe Änderung schon beim Übersetzen auf, siehe [IDs aus dem Modell](#ids-aus-dem-modell).
 3. **Variante B, „abgelehnt“ löschen:** Erst das Modell zurücksetzen (Schritt 5), dann den Pfeil „abgelehnt“ (`Flow_Abgelehnt`) anklicken und löschen, speichern. Im Texteditor gehören dazu auch `<bpmn:outgoing>` am Gateway, `<bpmn:incoming>` an `Task_Ablehnen` und die Kante `Flow_Abgelehnt_di`. Ergebnis: Nur der Ablehnungs-Test ist rot, Maven zählt ihn als „Error“, nicht als „Failure“. Das Abschließen der Aufgabe gelingt, die Engine scheitert erst am Speicherpunkt dahinter, die Zeile nennt deshalb `speicherpunktAnstossen`:
    ```
    GenehmigungsworkflowTag1Test.abgelehnterAntragWirdMitgeteilt:83->speicherpunktAnstossen:162 » ProcessEngine ENGINE-02004 No outgoing sequence flow for the element with id 'Gateway_Entscheidung' could be selected for continuing the process.
@@ -158,7 +197,7 @@ Darunter steht `Tests run: 4, Failures: 0, Errors: 1, Skipped: 0`. Danach wie na
 
 ## Modellkopien nachziehen
 
-Ändert sich ein Modell unter `prozess/` oder die Entwickler-Fassung unter `loesung/`, kopiert ihr es im Repo-Root neu nach `src/main/resources/`, im Startstand und in der Musterlösung:
+Ändert sich ein Modell unter `prozess/` oder die Entwickler-Fassung unter `loesung/`, kopiert ihr es im Repo-Root neu nach `src/main/resources/`, im Startstand und in der Musterlösung. Die Klassen mit den IDs zieht ihr nicht nach, der nächste Lauf erzeugt sie aus den neuen Kopien:
 
 ```bash
 cp loesung/genehmigungsworkflow-entwickler.bpmn prozesstest-java/src/main/resources/genehmigungsworkflow.bpmn

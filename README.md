@@ -26,7 +26,7 @@ git --version
    cd cibflow-developer-training-exercises
    docker login harbor.cib.de
    ```
-2. CIB flow starten. Beim ersten Mal lädt Docker die Images, das dauert einige Minuten. Fertig ist der Stack, wenn `docker compose logs init` mit `[init] Fertig.` endet. Wiederholt den Befehl, bis es so weit ist:
+2. CIB flow starten. Beim ersten Mal lädt Docker die Images, das dauert einige Minuten. Fertig ist der Stack, sobald `[init] Fertig.` in der letzten Zeile von `docker compose logs init` steht. Wiederholt den Befehl, bis es so weit ist:
    ```bash
    cd stack
    docker compose up -d
@@ -50,7 +50,7 @@ git --version
    dotnet run --project src/GenehmigungWorker
    ```
 
-Den Prozesstest in Java lasst ihr einmal vorab laufen, am besten gleich nach dem Klonen. Der erste Lauf lädt Maven und die Bibliotheken, rund 55 MB, danach geht es auch ohne Netz. Stack und Worker braucht er nicht. Läuft euer Worker schon, nehmt ein zweites Terminal. Im Repo-Root:
+Den Prozesstest in Java lasst ihr einmal vorab laufen, am besten gleich nach dem Klonen. Der erste Lauf lädt Maven und die Bibliotheken, rund 65 MB, danach geht es auch ohne Netz. Nach jedem `git pull` startet ihr ihn noch einmal mit Netz: Er lädt nach, was im neuen Stand dazugekommen ist. Stack und Worker braucht er nicht. Läuft euer Worker schon, nehmt ein zweites Terminal. Im Repo-Root:
 
 ```bash
 # macOS, Linux, Git Bash
@@ -104,7 +104,7 @@ cibflow-developer-training-exercises/
 │   ├── src/GenehmigungWorker/          # der External Task Worker (Konsolen-App, .NET 10)
 │   └── tests/GenehmigungWorker.Tests/  # Unit-Tests und Prozesstests (xUnit)
 ├── prozesstest-java/                   # Java: eure Prozesstests, Engine im Speicher, Anleitung in prozesstest-java/README.md
-│   ├── mvnw, mvnw.cmd, pom.xml         # Maven Wrapper und Projektdatei
+│   ├── mvnw, mvnw.cmd, pom.xml         # Maven Wrapper und Projektdatei, mit bpmn-to-code für die IDs der Modelle
 │   ├── src/main/resources/             # Kopien der Entwickler-Fassung und der Variante
 │   └── src/test/java/                  # die Prozesstests (JUnit 5)
 ├── loesung/                            # Musterlösung zu Übung 8 und 9, Anleitung in loesung/README.md

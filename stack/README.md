@@ -24,10 +24,11 @@ Ob auf eurem Rechner alles läuft, vom Startstand bis zur Musterlösung, prüft 
    ```bash
    docker compose up -d
    ```
-3. Etwa eine Minute warten. Fertig ist der Stack, wenn `docker compose logs init` mit dieser Zeile endet:
+3. Etwa eine Minute warten. Fertig ist der Stack, wenn die letzte Zeile von `docker compose logs init` diesen Text enthält:
    ```
    [init] Fertig. Benutzer: anna, gerda (Gruppe genehmiger), worker. Passwort jeweils wie der Benutzername.
    ```
+   Docker Compose setzt vor jede Zeile den Namen des Containers, etwa `init-1  |`.
 4. http://localhost:7083/client öffnen und anmelden, etwa als `demo` mit Passwort `demo`.
 
 ## Konten
