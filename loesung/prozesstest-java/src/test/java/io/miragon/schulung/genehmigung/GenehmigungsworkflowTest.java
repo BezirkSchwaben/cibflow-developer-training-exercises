@@ -1,5 +1,8 @@
 package io.miragon.schulung.genehmigung;
 
+import static io.miragon.schulung.genehmigung.api.ProcessGenehmigungProcessApi.Elements.*;
+import static io.miragon.schulung.genehmigung.api.ProcessGenehmigungProcessApi.PROCESS_ID;
+import static io.miragon.schulung.genehmigung.api.ProcessGenehmigungProcessApi.ServiceTasks.GENEHMIGUNG_VERBUCHEN;
 import static org.cibseven.bpm.engine.test.assertions.bpmn.BpmnAwareTests.assertThat;
 import static org.cibseven.bpm.engine.test.assertions.bpmn.BpmnAwareTests.complete;
 import static org.cibseven.bpm.engine.test.assertions.bpmn.BpmnAwareTests.execute;
@@ -13,6 +16,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 
+import io.miragon.bpmn.runtime.ElementId;
 import org.assertj.core.api.Assertions;
 import org.cibseven.bpm.engine.runtime.Job;
 import org.cibseven.bpm.engine.runtime.ProcessInstance;
@@ -33,6 +37,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * Wartezustand (isWaitingAt), Pfad (hasPassed, hasNotPassed), Variablen (variables).
  * Beim Timer kommt seine Fälligkeit dazu.
  * Der Test findet Elemente über die ID aus dem Modell, nie über die Beschriftung.
+ *
+ * IDs, Process ID und Topic stehen nicht als Text im Test. Sie kommen aus ProcessGenehmigungProcessApi, die
+ * bpmn-to-code bei jedem Lauf aus src/main/resources/genehmigungsworkflow.bpmn erzeugt, abgelegt unter
+ * target/generated-test-sources/bpmn-to-code. Aus der ID Task_Pruefen wird die Konstante TASK_PRUEFEN.
+ * Die Prüfungen der Engine erwarten die ID als Text, deshalb TASK_PRUEFEN.getValue().
+ * Ändert jemand eine ID im Modell, übersetzt der Test nicht mehr, und Maven nennt jede Zeile mit der alten ID.
  */
 @ExtendWith(ProcessEngineExtension.class)
 @Deployment(resources = "genehmigungsworkflow.bpmn")
@@ -50,25 +60,25 @@ class GenehmigungsworkflowTest {
         ProcessInstance antrag = antragStarten();
 
         // 2. Warten: nach dem Speicherpunkt bei "Antrag prüfen" und nirgends sonst (Wartezustand)
-        speicherpunktAnstossen(antrag, "StartEvent_Antrag");
-        assertThat(antrag).isWaitingAtExactly("Task_Pruefen");
+        speicherpunktAnstossen(antrag, START_EVENT_ANTRAG);
+        assertThat(antrag).isWaitingAtExactly(TASK_PRUEFEN.getValue());
         assertThat(antrag).task().hasCandidateGroup("genehmiger");
 
         // 3. Entscheiden: wie die genehmigende Stelle, danach entscheidet erst das Gateway
         complete(task(), withVariables("entscheidung", "genehmigt"));
-        speicherpunktAnstossen(antrag, "Task_Pruefen");
+        speicherpunktAnstossen(antrag, TASK_PRUEFEN);
 
         // 4. Verbuchen: External Task erreicht, "entscheidung" steht auf genehmigt (Variablen),
         //    dann abschließen wie der Worker
-        assertThat(antrag).isWaitingAtExactly("Task_Verbuchen")
+        assertThat(antrag).isWaitingAtExactly(TASK_VERBUCHEN.getValue())
             .variables().containsEntry("entscheidung", "genehmigt");
-        assertThat(antrag).externalTask().hasTopicName("genehmigung-verbuchen");
+        assertThat(antrag).externalTask().hasTopicName(GENEHMIGUNG_VERBUCHEN);
         complete(externalTask(), withVariables("buchungsnummer", "B-2026-0001"));
 
         // 5. Beenden: Ende bei "Antrag genehmigt", der Pfad "abgelehnt" blieb unberührt (Pfad)
         assertThat(antrag).isEnded()
-            .hasPassed("Task_Pruefen", "Gateway_Entscheidung", "Task_Verbuchen", "End_Genehmigt")
-            .hasNotPassed("Task_Ablehnen", "End_Abgelehnt");
+            .hasPassed(TASK_PRUEFEN.getValue(), GATEWAY_ENTSCHEIDUNG.getValue(), TASK_VERBUCHEN.getValue(), END_GENEHMIGT.getValue())
+            .hasNotPassed(TASK_ABLEHNEN.getValue(), END_ABGELEHNT.getValue());
     }
 
     @Test
@@ -76,18 +86,18 @@ class GenehmigungsworkflowTest {
     @DisplayName("Ablehnung: „Ablehnung mitteilen“, nie verbuchen")
     void abgelehnterAntragWirdMitgeteilt() {
         ProcessInstance antrag = antragStarten();
-        speicherpunktAnstossen(antrag, "StartEvent_Antrag");
-        assertThat(antrag).isWaitingAtExactly("Task_Pruefen");
+        speicherpunktAnstossen(antrag, START_EVENT_ANTRAG);
+        assertThat(antrag).isWaitingAtExactly(TASK_PRUEFEN.getValue());
 
         complete(task(), withVariables("entscheidung", "abgelehnt"));
-        speicherpunktAnstossen(antrag, "Task_Pruefen");
+        speicherpunktAnstossen(antrag, TASK_PRUEFEN);
 
         // Ablehnung: "Ablehnung mitteilen" wartet als Aufgabe, erst danach ist Schluss
-        assertThat(antrag).isWaitingAtExactly("Task_Ablehnen");
+        assertThat(antrag).isWaitingAtExactly(TASK_ABLEHNEN.getValue());
         complete(task());
         assertThat(antrag).isEnded()
-            .hasPassed("Task_Ablehnen", "End_Abgelehnt")
-            .hasNotPassed("Task_Verbuchen", "End_Genehmigt")
+            .hasPassed(TASK_ABLEHNEN.getValue(), END_ABGELEHNT.getValue())
+            .hasNotPassed(TASK_VERBUCHEN.getValue(), END_GENEHMIGT.getValue())
             .variables().doesNotContainKey("buchungsnummer");
     }
 
@@ -96,23 +106,23 @@ class GenehmigungsworkflowTest {
     @DisplayName("Nachbesserung: zurück an die Antragsteller:in, danach wieder „Antrag prüfen“")
     void nachbesserungFuehrtZurueckZurPruefung() {
         ProcessInstance antrag = antragStarten();
-        speicherpunktAnstossen(antrag, "StartEvent_Antrag");
-        assertThat(antrag).isWaitingAtExactly("Task_Pruefen");
+        speicherpunktAnstossen(antrag, START_EVENT_ANTRAG);
+        assertThat(antrag).isWaitingAtExactly(TASK_PRUEFEN.getValue());
 
         complete(task(), withVariables("entscheidung", "nachbessern"));
-        speicherpunktAnstossen(antrag, "Task_Pruefen");
+        speicherpunktAnstossen(antrag, TASK_PRUEFEN);
 
         // "Antrag nachbessern" geht an ${antragsteller}
-        assertThat(antrag).isWaitingAtExactly("Task_Nachbessern");
+        assertThat(antrag).isWaitingAtExactly(TASK_NACHBESSERN.getValue());
         assertThat(antrag).task().isAssignedTo(ANTRAGSTELLER);
 
         complete(task());
-        speicherpunktAnstossen(antrag, "Task_Nachbessern");
+        speicherpunktAnstossen(antrag, TASK_NACHBESSERN);
 
         // Wieder bei "Antrag prüfen", die Aufgabe liegt wieder bei der genehmigenden Stelle
-        assertThat(antrag).isWaitingAtExactly("Task_Pruefen")
-            .hasPassed("Task_Nachbessern")
-            .hasNotPassed("Task_Verbuchen", "Task_Ablehnen");
+        assertThat(antrag).isWaitingAtExactly(TASK_PRUEFEN.getValue())
+            .hasPassed(TASK_NACHBESSERN.getValue())
+            .hasNotPassed(TASK_VERBUCHEN.getValue(), TASK_ABLEHNEN.getValue());
         assertThat(antrag).task().hasCandidateGroup("genehmiger");
     }
 
@@ -121,24 +131,24 @@ class GenehmigungsworkflowTest {
     @DisplayName("Timer nach 3 Tagen: „Erinnerung senden“, Aufgabe bleibt offen")
     void timerSendetErinnerung() {
         ProcessInstance antrag = antragStarten();
-        speicherpunktAnstossen(antrag, "StartEvent_Antrag");
-        assertThat(antrag).isWaitingAtExactly("Task_Pruefen");
+        speicherpunktAnstossen(antrag, START_EVENT_ANTRAG);
+        assertThat(antrag).isWaitingAtExactly(TASK_PRUEFEN.getValue());
 
         // Fällig in drei Minuten (im Modell PT3M, fachlich 3 Tage). Nicht warten: den Timer-Job gezielt ausführen
-        Job timer = job("Boundary_Timer", antrag);
+        Job timer = job(BOUNDARY_TIMER.getValue(), antrag);
         Date inDreiMinuten = Date.from(Instant.now().plus(Duration.ofMinutes(3)));
         Assertions.assertThat(timer.getDuedate()).as("Fälligkeit des Timers")
             .isCloseTo(inDreiMinuten, Duration.ofSeconds(10).toMillis());
         execute(timer);
 
         // Timer: nicht unterbrechend, danach sind zwei Aufgaben offen
-        assertThat(antrag).isWaitingAtExactly("Task_Pruefen", "Task_Erinnern");
-        complete(task("Task_Erinnern", antrag));
+        assertThat(antrag).isWaitingAtExactly(TASK_PRUEFEN.getValue(), TASK_ERINNERN.getValue());
+        complete(task(TASK_ERINNERN.getValue(), antrag));
 
         // Die Erinnerung ist erledigt, "Antrag prüfen" wartet weiter und wurde nie beendet
-        assertThat(antrag).isWaitingAtExactly("Task_Pruefen")
-            .hasPassed("Task_Erinnern", "End_Erinnert")
-            .hasNotPassed("Task_Pruefen");
+        assertThat(antrag).isWaitingAtExactly(TASK_PRUEFEN.getValue())
+            .hasPassed(TASK_ERINNERN.getValue(), END_ERINNERT.getValue())
+            .hasNotPassed(TASK_PRUEFEN.getValue());
     }
 
     /**
@@ -147,7 +157,7 @@ class GenehmigungsworkflowTest {
      * Der Business Key "Antrag-1" macht die Instanz in den Meldungen erkennbar.
      */
     private static ProcessInstance antragStarten() {
-        return runtimeService().startProcessInstanceByKey("Process_Genehmigung", "Antrag-1", withVariables(
+        return runtimeService().startProcessInstanceByKey(PROCESS_ID.getValue(), "Antrag-1", withVariables(
             "betrag", 1200,
             "begruendung", "Dienstreise",
             "antragsteller", ANTRAGSTELLER));
@@ -156,10 +166,10 @@ class GenehmigungsworkflowTest {
     /**
      * Prüft, dass die Instanz genau an diesem Speicherpunkt steht (Wartezustand), und stößt ihn dann an.
      * Der Speicherpunkt (asyncAfter) liegt hinter dem Element. Das Anstoßen erledigt im laufenden System
-     * der Job Executor, die Engine im Speicher hat keinen.
+     * der Job Executor, die Engine im Speicher hat keinen. Das Element kommt als Konstante, etwa TASK_PRUEFEN.
      */
-    private static void speicherpunktAnstossen(ProcessInstance antrag, String hinterElement) {
-        assertThat(antrag).isWaitingAtExactly(hinterElement);
-        execute(job(hinterElement, antrag));
+    private static void speicherpunktAnstossen(ProcessInstance antrag, ElementId hinterElement) {
+        assertThat(antrag).isWaitingAtExactly(hinterElement.getValue());
+        execute(job(hinterElement.getValue(), antrag));
     }
 }
