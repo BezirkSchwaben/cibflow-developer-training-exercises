@@ -3,7 +3,6 @@ package io.miragon.schulung.genehmigung;
 import static org.cibseven.bpm.engine.test.assertions.bpmn.BpmnAwareTests.assertThat;
 import static org.cibseven.bpm.engine.test.assertions.bpmn.BpmnAwareTests.complete;
 import static org.cibseven.bpm.engine.test.assertions.bpmn.BpmnAwareTests.execute;
-import static org.cibseven.bpm.engine.test.assertions.bpmn.BpmnAwareTests.externalTask;
 import static org.cibseven.bpm.engine.test.assertions.bpmn.BpmnAwareTests.job;
 import static org.cibseven.bpm.engine.test.assertions.bpmn.BpmnAwareTests.runtimeService;
 import static org.cibseven.bpm.engine.test.assertions.bpmn.BpmnAwareTests.task;
@@ -26,8 +25,10 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
- * Prozesstest für den Genehmigungsworkflow: Engine und Datenbank im Speicher, pro Test frisch deployt.
- * Der Test spielt alle Beteiligten selbst: Antragsteller:in, genehmigende Stelle, Worker.
+ * Prozesstest für die Demo in Kapitel 10: das fertige Modell nach Übung 7, nur mit User Tasks.
+ * "Tag1" im Namen steht für dieses Modell ohne External Task. Engine und Datenbank im Speicher, pro Test frisch deployt.
+ * Der Test spielt alle Beteiligten selbst: Antragsteller:in und genehmigende Stelle. Jede Aufgabe schließt er selbst ab.
+ * Die Tests für das Modell mit External Task (Übung 9) stehen in GenehmigungsworkflowTest.
  *
  * Die Prüfungen beantworten drei Fragen an die Engine:
  * Wartezustand (isWaitingAt), Pfad (hasPassed, hasNotPassed), Variablen (variables).
@@ -35,10 +36,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * Der Test findet Elemente über die ID aus dem Modell, nie über die Beschriftung.
  */
 @ExtendWith(ProcessEngineExtension.class)
-@Deployment(resources = "genehmigungsworkflow.bpmn")
+@Deployment(resources = "genehmigungsworkflow-tag1.bpmn")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@DisplayName("Genehmigungsworkflow")
-class GenehmigungsworkflowTest {
+@DisplayName("Genehmigungsworkflow, Modell ohne External Task")
+class GenehmigungsworkflowTag1Test {
 
     private static final String ANTRAGSTELLER = "anna";
 
@@ -58,12 +59,11 @@ class GenehmigungsworkflowTest {
         complete(task(), withVariables("entscheidung", "genehmigt"));
         speicherpunktAnstossen(antrag, "Task_Pruefen");
 
-        // 4. Verbuchen: External Task erreicht, "entscheidung" steht auf genehmigt (Variablen),
-        //    dann abschließen wie der Worker
+        // 4. Verbuchen: "Genehmigung verbuchen" wartet als Aufgabe, "entscheidung" steht auf genehmigt (Variablen),
+        //    dann abschließen wie ein Mensch in der Aufgabenliste
         assertThat(antrag).isWaitingAtExactly("Task_Verbuchen")
             .variables().containsEntry("entscheidung", "genehmigt");
-        assertThat(antrag).externalTask().hasTopicName("genehmigung-verbuchen");
-        complete(externalTask(), withVariables("buchungsnummer", "B-2026-0001"));
+        complete(task());
 
         // 5. Beenden: Ende bei "Antrag genehmigt", der Pfad "abgelehnt" blieb unberührt (Pfad)
         assertThat(antrag).isEnded()
@@ -87,8 +87,7 @@ class GenehmigungsworkflowTest {
         complete(task());
         assertThat(antrag).isEnded()
             .hasPassed("Task_Ablehnen", "End_Abgelehnt")
-            .hasNotPassed("Task_Verbuchen", "End_Genehmigt")
-            .variables().doesNotContainKey("buchungsnummer");
+            .hasNotPassed("Task_Verbuchen", "End_Genehmigt");
     }
 
     @Test

@@ -88,11 +88,12 @@ class GenehmigungsworkflowTest {
         // Warten:      genau bei "Task_Pruefen"
         // Entscheiden: die Aufgabe mit entscheidung = "abgelehnt" abschließen,
         //              danach den Speicherpunkt hinter "Task_Pruefen" anstoßen
-        // Prüfen:      Instanz beendet (isEnded)
+        // Warten:      genau bei "Task_Ablehnen": "Ablehnung mitteilen" ist eine Aufgabe, kein External Task
+        // Mitteilen:   die Aufgabe ohne Variablen abschließen, complete(task())
+        // Prüfen:      erst jetzt ist die Instanz beendet (isEnded)
         //              Pfad: "Task_Ablehnen" und "End_Abgelehnt" durchlaufen (hasPassed),
         //                    "Task_Verbuchen" und "End_Genehmigt" nicht (hasNotPassed)
-        //              Variablen: ablehnungMitgeteilt ist true (containsEntry),
-        //                         buchungsnummer gibt es nicht (doesNotContainKey)
+        //              Variablen: buchungsnummer gibt es nicht (doesNotContainKey)
     }
 
     @Test
@@ -105,8 +106,9 @@ class GenehmigungsworkflowTest {
         //              danach den Speicherpunkt hinter "Task_Pruefen" anstoßen
         // Warten:      genau bei "Task_Nachbessern", die Aufgabe gehört der Antragsteller:in
         //              (assertThat(antrag).task().isAssignedTo(ANTRAGSTELLER))
-        // Nachbessern: die Aufgabe ohne Variablen abschließen, complete(task())
-        // Prüfen:      wieder genau bei "Task_Pruefen", ohne Speicherpunkt dazwischen
+        // Nachbessern: die Aufgabe ohne Variablen abschließen, complete(task()),
+        //              danach den Speicherpunkt hinter "Task_Nachbessern" anstoßen: Seit Übung 7 hängt dort ein easyForm
+        // Prüfen:      wieder genau bei "Task_Pruefen"
         //              Pfad: "Task_Nachbessern" durchlaufen, "Task_Verbuchen" und "Task_Ablehnen" nicht
         //              Aufgabe: "Antrag prüfen" ist wieder offen bei der Gruppe genehmiger
         //              (assertThat(antrag).task().hasCandidateGroup("genehmiger"), wie im Happy Path)
@@ -124,9 +126,11 @@ class GenehmigungsworkflowTest {
         //              Assertions.assertThat(timer.getDuedate()).isCloseTo(inDreiTagen, Duration.ofMinutes(1).toMillis());
         //              Hier mit "Assertions.": Das importierte assertThat kennt kein Datum.
         // Auslösen:    execute(timer), statt drei Tage zu warten
-        // Prüfen:      weiter genau bei "Task_Pruefen", der Timer unterbricht die Aufgabe nicht
+        // Warten:      jetzt an zwei Stellen, isWaitingAtExactly("Task_Pruefen", "Task_Erinnern"):
+        //              Der Timer unterbricht nicht, "Erinnerung senden" kommt als zweite Aufgabe dazu
+        // Erinnern:    complete(task("Task_Erinnern", antrag)). task() ohne ID scheitert bei zwei offenen Aufgaben
+        // Prüfen:      wieder genau bei "Task_Pruefen"
         //              Pfad: "Task_Erinnern" und "End_Erinnert" durchlaufen, "Task_Pruefen" nie beendet (hasNotPassed)
-        //              Variablen: erinnerungGesendet ist true
     }
 
     /**

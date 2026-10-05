@@ -5,6 +5,231 @@
         {
           "elements": [
             {
+              "type": "number",
+              "counter": 1,
+              "id": "betrag",
+              "label": "Betrag in Euro",
+              "description": "",
+              "value": null,
+              "selected": false,
+              "validation": {
+                "valid": null,
+                "message": "",
+                "required": false,
+                "min": null,
+                "max": null
+              },
+              "optional": [],
+              "disabled": true,
+              "styles": {
+                "grid": {
+                  "options": [
+                    1,
+                    3,
+                    4,
+                    6,
+                    9,
+                    12
+                  ],
+                  "genericSelected": -1,
+                  "mobileSelected": 5,
+                  "position": ""
+                },
+                "classes": {},
+                "style": {},
+                "labelClasses": {}
+              },
+              "groupStyles": {
+                "alignment": "",
+                "maxWidth": {
+                  "type": "%",
+                  "value": ""
+                },
+                "disabledGrid": false,
+                "alignmentContent": "",
+                "gap": 0,
+                "card": false
+              },
+              "collapsible": {
+                "enable": false,
+                "translations": {
+                  "de": {
+                    "header": "",
+                    "info": ""
+                  },
+                  "en": {
+                    "header": "",
+                    "info": ""
+                  },
+                  "es": {
+                    "header": "",
+                    "info": ""
+                  }
+                },
+                "isVisible": true
+              },
+              "translationsReviewed": "",
+              "tabId": null,
+              "stepId": null,
+              "saveType": "",
+              "elements": [],
+              "translations": {
+                "de": {
+                  "label": "Betrag in Euro",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                },
+                "en": {
+                  "label": "",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                },
+                "es": {
+                  "label": "",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                }
+              },
+              "stacked": false,
+              "placeholder": "",
+              "config": {
+                "adornment": {
+                  "enabled": false,
+                  "text": "",
+                  "position": "prepend"
+                },
+                "inputEvent": {
+                  "sendEvent": false,
+                  "correlateMsgs": false,
+                  "refreshTask": false,
+                  "refreshComponents": false,
+                  "refreshComponentIds": [],
+                  "saveForm": false,
+                  "skipValidation": false,
+                  "eventMode": "change"
+                }
+              }
+            },
+            {
+              "type": "textarea",
+              "counter": 1,
+              "id": "begruendung",
+              "label": "Begründung",
+              "description": "",
+              "value": "",
+              "selected": false,
+              "validation": {
+                "valid": null,
+                "message": "",
+                "required": false,
+                "maxlength": null,
+                "minlength": null
+              },
+              "optional": [],
+              "disabled": true,
+              "styles": {
+                "grid": {
+                  "options": [
+                    1,
+                    3,
+                    4,
+                    6,
+                    9,
+                    12
+                  ],
+                  "genericSelected": -1,
+                  "mobileSelected": 5,
+                  "position": ""
+                },
+                "classes": {},
+                "style": {},
+                "labelClasses": {}
+              },
+              "groupStyles": {
+                "alignment": "",
+                "maxWidth": {
+                  "type": "%",
+                  "value": ""
+                },
+                "disabledGrid": false,
+                "alignmentContent": "",
+                "gap": 0,
+                "card": false
+              },
+              "collapsible": {
+                "enable": false,
+                "translations": {
+                  "de": {
+                    "header": "",
+                    "info": ""
+                  },
+                  "en": {
+                    "header": "",
+                    "info": ""
+                  },
+                  "es": {
+                    "header": "",
+                    "info": ""
+                  }
+                },
+                "isVisible": true
+              },
+              "translationsReviewed": "",
+              "tabId": null,
+              "stepId": null,
+              "saveType": "",
+              "elements": [],
+              "translations": {
+                "de": {
+                  "label": "Begründung",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                },
+                "en": {
+                  "label": "",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                },
+                "es": {
+                  "label": "",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                }
+              },
+              "stacked": false,
+              "placeholder": "",
+              "config": {
+                "inputEvent": {
+                  "sendEvent": false,
+                  "correlateMsgs": false,
+                  "refreshTask": false,
+                  "refreshComponents": false,
+                  "refreshComponentIds": [],
+                  "saveForm": false,
+                  "skipValidation": false,
+                  "eventMode": "change"
+                }
+              }
+            },
+            {
               "type": "select",
               "counter": 1,
               "id": "entscheidung",
@@ -143,6 +368,178 @@
                   }
                 }
               ]
+            }
+          ],
+          "selected": false,
+          "tabId": null,
+          "optional": [],
+          "stepId": null,
+          "groupStyles": {
+            "alignment": "",
+            "maxWidth": {
+              "type": "%",
+              "value": ""
+            },
+            "disabledGrid": false,
+            "alignmentContent": "",
+            "gap": 0,
+            "card": false
+          },
+          "collapsible": {
+            "enable": false,
+            "translations": {
+              "de": {
+                "header": "",
+                "info": ""
+              },
+              "en": {
+                "header": "",
+                "info": ""
+              },
+              "es": {
+                "header": "",
+                "info": ""
+              }
+            },
+            "isVisible": true
+          }
+        },
+        {
+          "elements": [
+            {
+              "type": "textarea",
+              "counter": 1,
+              "id": "begruendungAblehnung",
+              "label": "Begründung der Ablehnung",
+              "description": "",
+              "value": "",
+              "selected": false,
+              "validation": {
+                "valid": null,
+                "message": "",
+                "required": false,
+                "maxlength": null,
+                "minlength": null
+              },
+              "optional": [
+                {
+                  "property": "visibility",
+                  "type": "id",
+                  "id": "entscheidung",
+                  "operation": "equal",
+                  "values": [
+                    "abgelehnt"
+                  ],
+                  "variableValue": "",
+                  "operatorGroup": "and",
+                  "operatorValues": "or"
+                },
+                {
+                  "property": "required",
+                  "type": "id",
+                  "id": "entscheidung",
+                  "operation": "equal",
+                  "values": [
+                    "abgelehnt"
+                  ],
+                  "variableValue": "",
+                  "operatorGroup": "and",
+                  "operatorValues": "or"
+                }
+              ],
+              "disabled": false,
+              "styles": {
+                "grid": {
+                  "options": [
+                    1,
+                    3,
+                    4,
+                    6,
+                    9,
+                    12
+                  ],
+                  "genericSelected": -1,
+                  "mobileSelected": 5,
+                  "position": ""
+                },
+                "classes": {},
+                "style": {},
+                "labelClasses": {}
+              },
+              "groupStyles": {
+                "alignment": "",
+                "maxWidth": {
+                  "type": "%",
+                  "value": ""
+                },
+                "disabledGrid": false,
+                "alignmentContent": "",
+                "gap": 0,
+                "card": false
+              },
+              "collapsible": {
+                "enable": false,
+                "translations": {
+                  "de": {
+                    "header": "",
+                    "info": ""
+                  },
+                  "en": {
+                    "header": "",
+                    "info": ""
+                  },
+                  "es": {
+                    "header": "",
+                    "info": ""
+                  }
+                },
+                "isVisible": true
+              },
+              "translationsReviewed": "",
+              "tabId": null,
+              "stepId": null,
+              "saveType": "",
+              "elements": [],
+              "translations": {
+                "de": {
+                  "label": "Begründung der Ablehnung",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                },
+                "en": {
+                  "label": "",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                },
+                "es": {
+                  "label": "",
+                  "description": "",
+                  "placeholder": "",
+                  "value": "",
+                  "confirmation": "",
+                  "info": ""
+                }
+              },
+              "stacked": false,
+              "placeholder": "",
+              "config": {
+                "inputEvent": {
+                  "sendEvent": false,
+                  "correlateMsgs": false,
+                  "refreshTask": false,
+                  "refreshComponents": false,
+                  "refreshComponentIds": [],
+                  "saveForm": false,
+                  "skipValidation": false,
+                  "eventMode": "change"
+                }
+              }
             }
           ],
           "selected": false,

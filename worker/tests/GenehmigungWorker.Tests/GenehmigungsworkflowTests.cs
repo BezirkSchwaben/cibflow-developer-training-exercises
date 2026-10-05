@@ -36,8 +36,12 @@ public class GenehmigungsworkflowTests : IDisposable
     public Task Abgelehnter_Antrag_bekommt_keinen_External_Task()
     {
         // Wie oben starten und bei Task_Pruefen warten, dann mit entscheidung "abgelehnt" abschließen.
-        // Danach darf die Instanz keinen External Task haben und ist beendet:
+        // Danach wartet die Aufgabe "Ablehnung mitteilen", einen External Task hat die Instanz nicht:
+        //   var mitteilen = await _engine.GetTaskAsync(instanz.Id);
+        //   Assert.Equal("Task_Ablehnen", mitteilen.TaskDefinitionKey);
         //   Assert.Empty(await _engine.GetExternalTasksAsync(instanz.Id));
+        // Erst wenn auch diese Aufgabe abgeschlossen ist, ist die Instanz beendet:
+        //   await _engine.CompleteTaskAsync(mitteilen.Id, new());
         //   Assert.Equal("COMPLETED", (await _engine.GetHistoryAsync(instanz.Id)).State);
         Assert.Fail("TODO Kapitel 12: Gegenprobe schreiben");
         return Task.CompletedTask;

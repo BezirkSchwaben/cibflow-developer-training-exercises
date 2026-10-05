@@ -29,6 +29,8 @@ worker/src/GenehmigungWorker/Fachsystem/BuchungAbgelehntException.cs
 worker/tests/GenehmigungWorker.Tests/ExternalTaskClientTests.cs
 worker/tests/GenehmigungWorker.Tests/FehlerpfadTests.cs
 prozesstest-java/src/test/java/io/miragon/schulung/genehmigung/FehlerpfadTest.java
+prozesstest-java/src/main/resources/genehmigungsworkflow-tag1.bpmn
+prozesstest-java/src/test/java/io/miragon/schulung/genehmigung/GenehmigungsworkflowTag1Test.java
 "
 
 # Diese Dateien gibt es nur im Startstand.
