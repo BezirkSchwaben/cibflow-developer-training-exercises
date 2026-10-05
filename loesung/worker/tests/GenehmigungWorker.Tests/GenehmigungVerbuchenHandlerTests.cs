@@ -24,8 +24,8 @@ public class GenehmigungVerbuchenHandlerTests
     [Fact]
     public void Ohne_Business_Key_verbucht_unter_der_Prozessinstanz_ID()
     {
-        // gegeben: ein Antrag aus dem Startformular, ohne Business Key,
-        // betrag als long, so wie ExternalTaskClient ihn aus der Engine auspackt
+        // gegeben: ein Antrag ohne Business Key wie aus dem Startformular, betrag hier als long
+        // wie nach einem Start per REST, so wie ExternalTaskClient ihn aus der Engine auspackt
         var task = new ExternalTask("t-2", "genehmigung-verbuchen", null, null,
             "pi-4712", new() { ["antragsteller"] = "anna", ["betrag"] = 1200L,
                                ["begruendung"] = "Fachtagung" });

@@ -1,16 +1,20 @@
 # Prüft das Übungs-Repo bei jedem Push und Pull Request auf main.
 #
-#   startstand          Der Startstand unter worker/ (Ende der Übung in Kapitel 11) baut, und seine Tests laufen durch.
+#   startstand          Der Startstand unter worker/ (Ende von Übung 8) baut, und seine Tests laufen durch.
 #                       Die Tests mit TODO sind übersprungen, nicht rot. Dazu: Das Projekt-ZIP passt zum Modell,
 #                       und die Musterlösung unter loesung/ ist vollständig und weicht nur in den Übungsdateien
 #                       vom Startstand ab (.github/scripts/loesung-abgleich.sh).
 #   musterloesung       Die Musterlösung unter loesung/worker/, ein vollständiges Projekt:
 #                       Build, Unit-Tests ohne Engine, Engine per Docker Compose,
-#                       Deployment mit "dotnet run -- deploy", Smoke-Test und die Prozesstests gegen die Engine.
-#   java-startstand     Der Prozesstest in Java unter prozesstest-java/: Die Modellkopien sind byte-gleich zu Vorlage
-#                       und Variante, der Happy Path läuft grün, die drei TODO-Tests sind übersprungen, nicht rot.
+#                       Deployment mit "dotnet run -- deploy": erst der Startstand (fertiges Modell nach Übung 7, nur User Tasks),
+#                       dann wie in Übung 8 die Entwickler-Fassung mit External Task. Danach Smoke-Test und
+#                       die Prozesstests gegen die Engine.
+#   java-startstand     Der Prozesstest in Java unter prozesstest-java/: Die Modellkopien sind byte-gleich zur
+#                       Entwickler-Fassung und zur Variante, der Happy Path läuft grün, die drei TODO-Tests sind
+#                       übersprungen, nicht rot. Dazu: Die Modellkopie der Demo in Kapitel 10 ist der Startstand.
 #   java-musterloesung  Die Musterlösung unter loesung/prozesstest-java/, ein vollständiges Projekt:
-#                       alle Tests grün, keiner übersprungen, der Bonus Fehlerpfad eingeschlossen.
+#                       alle Tests grün, keiner übersprungen, die Demo-Tests am Modell ohne External Task und
+#                       der Bonus Fehlerpfad eingeschlossen.
 #                       Die Java-Jobs brauchen weder Docker noch Zugangsdaten, die Engine läuft im Speicher.
 #
 # Warum die CI gegen reines CIB seven läuft und nicht gegen den CIB flow Stack aus stack/:
@@ -130,7 +134,7 @@ jobs:
           echo "::error::init ist nach zwölf Minuten nicht fertig"
           exit 1
 
-      - name: Modell deployen
+      - name: Startstand deployen (fertiges Modell nach Übung 7, nur User Tasks)
         env:
           EngineBenutzer: worker
           EnginePasswort: worker
@@ -138,6 +142,17 @@ jobs:
           # Erstes Deployment auf dem frischen Stack: Deploy.cs muss eine neue Version anlegen
           dotnet run --project loesung/worker/src/GenehmigungWorker --no-build -- deploy | tee deploy.log
           grep -q "Neue Version: Process_Genehmigung, Version 1" deploy.log
+
+      - name: Übung 8 nachstellen (Entwickler-Fassung ablegen und deployen)
+        env:
+          EngineBenutzer: worker
+          EnginePasswort: worker
+        run: |
+          # Wie der Rückfall in Übung 8: Die fertige Fassung ersetzt das Modell unter prozess/.
+          # Der Umbau muss als nächste Version ankommen, sonst holt kein Worker je einen Task.
+          cp loesung/genehmigungsworkflow-entwickler.bpmn prozess/genehmigungsworkflow.bpmn
+          dotnet run --project loesung/worker/src/GenehmigungWorker --no-build -- deploy | tee deploy.log
+          grep -q "Neue Version: Process_Genehmigung, Version 2" deploy.log
 
       - name: Smoke-Test (Anmeldung, Deployment, alle drei Pfade per REST)
         working-directory: stack
@@ -174,20 +189,27 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Modellkopien passen zu Vorlage und Variante
+      - name: Modellkopien passen zu Entwickler-Fassung, Variante und Startstand
         run: |
-          # Der Test liest das Modell aus dem eigenen Projekt. Im Repo müssen die Kopien byte-gleich zur Vorlage bleiben.
+          # Der Test liest das Modell aus dem eigenen Projekt. Getestet wird die Entwickler-Fassung, also das Modell
+          # nach Übung 8. Im Repo müssen die Kopien byte-gleich zu loesung/genehmigungsworkflow-entwickler.bpmn bleiben.
           # Die Kopien unter loesung/prozesstest-java/ prüft .github/scripts/loesung-abgleich.sh gegen diese hier.
           fehler=0
-          for paar in "genehmigungsworkflow.bpmn:../prozess/genehmigungsworkflow.bpmn" \
+          for paar in "genehmigungsworkflow.bpmn:../loesung/genehmigungsworkflow-entwickler.bpmn" \
                       "verbuchen-fehlerpfad.bpmn:../prozess/varianten/verbuchen-fehlerpfad.bpmn"; do
             kopie="src/main/resources/${paar%%:*}"
             vorlage="${paar#*:}"
             if ! cmp -s "$kopie" "$vorlage"; then
-              echo "::error::prozesstest-java/$kopie weicht von ${vorlage#../} ab. Nach einer Änderung der Vorlage neu kopieren: cp ${vorlage#../} prozesstest-java/src/main/resources/ und cp ${vorlage#../} loesung/prozesstest-java/src/main/resources/"
+              echo "::error::prozesstest-java/$kopie weicht von ${vorlage#../} ab. Neu kopieren: cp ${vorlage#../} prozesstest-java/$kopie und cp ${vorlage#../} loesung/prozesstest-java/$kopie"
               fehler=1
             fi
           done
+          # Die Demo in Kapitel 10 testet das Modell ohne External Task: Ihre Kopie ist der Startstand unter prozess/
+          demo=../loesung/prozesstest-java/src/main/resources/genehmigungsworkflow-tag1.bpmn
+          if ! cmp -s "$demo" ../prozess/genehmigungsworkflow.bpmn; then
+            echo "::error::${demo#../} weicht von prozess/genehmigungsworkflow.bpmn ab. Nach der Demo in Kapitel 10: git restore loesung/prozesstest-java. Nach einer Änderung am Startstand: cp prozess/genehmigungsworkflow.bpmn ${demo#../}"
+            fehler=1
+          fi
           exit $fehler
 
       - name: JDK 21 einrichten
@@ -244,7 +266,7 @@ jobs:
       - name: Prozesstests ausführen (Engine im Speicher)
         run: ./mvnw -B -ntp test
 
-      - name: Kein Test übersprungen, Bonus Fehlerpfad dabei
+      - name: Kein Test übersprungen, Demo-Tests und Bonus Fehlerpfad dabei
         run: |
           # Maven zählt übersprungene Tests nicht als Fehler. In der Musterlösung darf keiner übersprungen sein.
           grep -o '<testsuite [^>]*>' target/surefire-reports/TEST-*.xml
@@ -254,5 +276,9 @@ jobs:
           fi
           if [ ! -f target/surefire-reports/TEST-io.miragon.schulung.genehmigung.FehlerpfadTest.xml ]; then
             echo "::error::Der Bonus FehlerpfadTest ist nicht gelaufen"
+            exit 1
+          fi
+          if [ ! -f target/surefire-reports/TEST-io.miragon.schulung.genehmigung.GenehmigungsworkflowTag1Test.xml ]; then
+            echo "::error::Die Demo-Tests am Modell ohne External Task (GenehmigungsworkflowTag1Test) sind nicht gelaufen"
             exit 1
           fi

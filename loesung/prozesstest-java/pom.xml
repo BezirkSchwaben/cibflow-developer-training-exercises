@@ -4,6 +4,8 @@
   Engine und Datenbank laufen im Speicher, ohne Server und ohne Spring Boot.
   Alle Läufe mit ./mvnw test (Windows: .\mvnw.cmd test), Anleitung in prozesstest-java/README.md.
   Maven selbst ist über .mvn/jvm.config leiser gestellt.
+  Process ID, Element-IDs, Topic und Fehlercode lesen die Tests aus Klassen, die bpmn-to-code bei jedem Lauf
+  aus den Modellen in src/main/resources erzeugt, unter target/generated-test-sources/bpmn-to-code.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -27,6 +29,10 @@
     <assertj.version>3.27.7</assertj.version>
     <h2.version>2.3.232</h2.version>
     <slf4j.version>2.0.17</slf4j.version>
+
+    <!-- bpmn-to-code von Miragon (Maven Central) erzeugt aus jedem Modell eine Klasse mit seinen IDs -->
+    <bpmn-to-code.version>5.2.0</bpmn-to-code.version>
+    <bpmn-api.ordner>${project.build.directory}/generated-test-sources/bpmn-to-code</bpmn-api.ordner>
 
     <!-- Zeichen im Testbaum. Zeigt die Konsole ? statt ✔ und ✘: -Dbaum.theme=ASCII -->
     <baum.theme>UNICODE</baum.theme>
@@ -81,6 +87,13 @@
       <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- Die Typen der erzeugten Klassen: ElementId, ProcessId, BpmnError -->
+    <dependency>
+      <groupId>io.miragon</groupId>
+      <artifactId>bpmn-to-code-runtime</artifactId>
+      <version>${bpmn-to-code.version}</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>
@@ -104,6 +117,105 @@
 
   <build>
     <plugins>
+      <!--
+        Erzeugt vor dem Übersetzen der Tests (Phase generate-test-sources) je Modell eine Klasse mit Process ID,
+        Element-IDs, Topics, Nachrichten und Fehlercodes, etwa ProcessGenehmigungProcessApi.Elements.TASK_PRUEFEN.
+        Sie liegt unter target/, entsteht bei jedem Lauf neu aus dem Modell und gehört nicht ins Repo.
+        Eine Ausführung je Modell, jede mit eigenem Paket: genehmigungsworkflow.bpmn und genehmigungsworkflow-tag1.bpmn
+        tragen dieselbe Process ID und ergäben im selben Paket dieselbe Klasse. Fehlt ein Modell, etwa
+        genehmigungsworkflow-tag1.bpmn im Startstand, erzeugt seine Ausführung nichts, und der Lauf geht weiter.
+        Vorher leert maven-clean-plugin den Ordner. bpmn-to-code 5.2.0 löscht keine alten Klassen, nach einer
+        geänderten Process ID übersetzte der Test sonst weiter gegen die alte Klasse.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>3.5.0</version>
+        <executions>
+          <execution>
+            <id>bpmn-api-leeren</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+            <configuration>
+              <excludeDefaultDirectories>true</excludeDefaultDirectories>
+              <filesets>
+                <fileset>
+                  <directory>${bpmn-api.ordner}</directory>
+                </fileset>
+              </filesets>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>io.miragon</groupId>
+        <artifactId>bpmn-to-code-maven</artifactId>
+        <version>${bpmn-to-code.version}</version>
+        <configuration>
+          <baseDir>${project.basedir}</baseDir>
+          <outputFolderPath>${bpmn-api.ordner}</outputFolderPath>
+          <outputLanguage>JAVA</outputLanguage>
+          <processEngine>CAMUNDA_7</processEngine>
+        </configuration>
+        <executions>
+          <execution>
+            <id>api-genehmigungsworkflow</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>generate-bpmn-api</goal>
+            </goals>
+            <configuration>
+              <filePattern>src/main/resources/genehmigungsworkflow.bpmn</filePattern>
+              <packagePath>io.miragon.schulung.genehmigung.api</packagePath>
+            </configuration>
+          </execution>
+          <execution>
+            <id>api-fehlerpfad</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>generate-bpmn-api</goal>
+            </goals>
+            <configuration>
+              <filePattern>src/main/resources/verbuchen-fehlerpfad.bpmn</filePattern>
+              <packagePath>io.miragon.schulung.genehmigung.api.fehlerpfad</packagePath>
+            </configuration>
+          </execution>
+          <execution>
+            <!-- Nur für die Demo in Kapitel 10, das Modell liegt nur in der Musterlösung -->
+            <id>api-tag1</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>generate-bpmn-api</goal>
+            </goals>
+            <configuration>
+              <filePattern>src/main/resources/genehmigungsworkflow-tag1.bpmn</filePattern>
+              <packagePath>io.miragon.schulung.genehmigung.api.tag1</packagePath>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Meldet den Ordner der erzeugten Klassen als Testquellen an: Maven übersetzt sie mit den Tests, die IDE findet sie -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.6.2</version>
+        <executions>
+          <execution>
+            <id>bpmn-api-als-testquellen</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>add-test-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${bpmn-api.ordner}</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>

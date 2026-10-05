@@ -24,10 +24,11 @@ Ob auf eurem Rechner alles läuft, vom Startstand bis zur Musterlösung, prüft 
    ```bash
    docker compose up -d
    ```
-3. Etwa eine Minute warten. Fertig ist der Stack, wenn `docker compose logs init` mit dieser Zeile endet:
+3. Etwa eine Minute warten. Fertig ist der Stack, wenn die letzte Zeile von `docker compose logs init` diesen Text enthält:
    ```
    [init] Fertig. Benutzer: anna, gerda (Gruppe genehmiger), worker. Passwort jeweils wie der Benutzername.
    ```
+   Docker Compose setzt vor jede Zeile den Namen des Containers, etwa `init-1  |`.
 4. http://localhost:7083/client öffnen und anmelden, etwa als `demo` mit Passwort `demo`.
 
 ## Konten
@@ -37,8 +38,8 @@ Passwort jeweils gleich dem Benutzernamen. Die Konten gibt es nur auf eurem Lapt
 | Benutzer | Rolle | Wofür |
 |---|---|---|
 | `demo` | Admin | Administration, Prozessmanagement, Import des Projekts |
-| `anna` | Antragstellerin | stellt Anträge über „Prozess starten“, bekommt „Antrag nachbessern“ |
-| `gerda` | Genehmigerin, Gruppe `genehmiger` | bearbeitet „Antrag prüfen“ |
+| `anna` | Antragstellerin | stellt Anträge über „Prozess starten“, bekommt „Antrag nachbessern“ und „Genehmigende Stelle benachrichtigen“ |
+| `gerda` | Genehmigerin, Gruppe `genehmiger` | bearbeitet „Antrag prüfen“, „Ablehnung mitteilen“, „Erinnerung senden“ und vor Übung 8 „Genehmigung verbuchen“ |
 | `worker` | technischer Benutzer | für euren C#-Worker, die Tests und REST-Aufrufe |
 
 Die Autorisierung ist lokal aus: Jeder angemeldete Benutzer sieht alle Kacheln und darf alles. Wem eine Aufgabe gehört, zeigen in „Aufgaben bearbeiten“ die Filter „Meine Aufgaben“ und „Aufgaben meiner Gruppen“.
@@ -78,7 +79,7 @@ Nach `down -v` legt der nächste `docker compose up -d` die Benutzer neu an. Sol
 
 **Das Formular einer Aufgabe ist ausgegraut.** Die Aufgabe ist euch noch nicht zugewiesen, darüber steht der Hinweis „Aufgabe ist Ihnen nicht zugewiesen“. Klickt auf „Mir zuweisen“, dann könnt ihr das Formular ausfüllen. Die Aufgabe steht danach unter „Meine Aufgaben“, deshalb zeigt „Aufgaben meiner Gruppen“ sie nicht mehr.
 
-**„Prozess starten“ meldet „Das Formular wurde nicht gefunden“.** Das Modell ist in der Engine, die easyForms dazu fehlen. Importiert das Projekt-ZIP im Prozessmanagement, wie im Aufgabenblatt zu [Kapitel 11](../aufgaben/kapitel-11-lokales-setup.md) beschrieben.
+**„Prozess starten“ meldet „Das Formular wurde nicht gefunden“.** Das Modell ist in der Engine, die easyForms dazu fehlen. Importiert das Projekt-ZIP im Prozessmanagement: angemeldet als `demo` Kachel „Prozessmanagement“, „Lokale Datei importieren“, das ZIP wählen, „Automatisch bereitstellen“ an lassen, „Importieren“.
 
 **Im Cockpit steht unter „Metriken“ „Lizenz erforderlich“.** Das ist lokal so gewollt: Der Stack läuft ohne Lizenzdatei. Alles, was die Übungen brauchen, funktioniert trotzdem.
 

@@ -1,19 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Genehmigungsworkflow, Vorlage für den Entwickler-Track.
+  Genehmigungsworkflow, Fassung nach Übung 8: wie das Modell nach Übung 7 (prozess/genehmigungsworkflow.bpmn),
+  „Genehmigung verbuchen“ ist ein External Task mit Topic genehmigung-verbuchen. Lösung von Übung 8.
+  Der C#-Worker holt ihn ab. Alle anderen Aufgaben bleiben User Tasks, die ID Task_Verbuchen bleibt gleich.
 
-  Gleiche IDs, gleiches Layout und gleiche Logik wie das Modell der Schulung
-  (camunda:initiator="antragsteller", Topic genehmigung-verbuchen, Platzhalter
-  an den Send Tasks). Die Formulare hängen über den CIB-Baustein "CIB easyForm"
-  (im Modeler: Vorlage, Auswählen) am Modell: das easyForm antragsformular am
-  Start-Event, genehmigungsformular an "Antrag prüfen". Wie der Baustein setzen
-  beide einen Speicherpunkt danach (camunda:asyncAfter).
+  Die Formulare hängen wie nach Übung 7 über den Baustein „CIB easyForm“ am Modell, mit je einem
+  Speicherpunkt (camunda:asyncAfter) hinter dem Start-Event, „Antrag prüfen“ und „Antrag nachbessern“.
+  Der Timer „3 Tage ohne Entscheidung“ steht fürs Training auf PT3M.
 
-  Die Formulare selbst liegen nicht im BPMN. Sie kommen mit dem Projekt-ZIP
-  prozess/genehmigungsworkflow-projekt.zip ins Prozessmanagement.
+  Process_Genehmigung ist die ID der Vorlage, euer eigenes Modell trägt euren Key (ProzessKey in
+  appsettings.json). Diese Fassung passt zum Projekt-ZIP prozess/genehmigungsworkflow-projekt.zip, nicht zu
+  einem eigenen Projekt mit eigenem Key.
 
-  Die Process ID Process_Genehmigung ist die der Vorlage. In der Schulung
-  ersetzt ihr diese Datei durch euer eigenes Modell mit eurem Key.
+  Diese Datei wird erzeugt, nicht von Hand ändern. Byte-gleiche Kopien:
+  prozesstest-java/src/main/resources/genehmigungsworkflow.bpmn
+  loesung/prozesstest-java/src/main/resources/genehmigungsworkflow.bpmn
 -->
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
@@ -32,7 +33,7 @@
   </bpmn:collaboration>
 
   <bpmn:process id="Process_Genehmigung" name="Genehmigungsworkflow" isExecutable="true" camunda:versionTag="1.0" camunda:historyTimeToLive="P365D">
-    <bpmn:startEvent id="StartEvent_Antrag" name="Antrag eingereicht" camunda:modelerTemplate="start-event-easy-form-json-5.4.2" camunda:asyncAfter="true" camunda:formKey="embedded:/camunda/app/tasklist/ui-element-templates/startform/template.html?template=easy-form-template" camunda:initiator="antragsteller">
+    <bpmn:startEvent id="StartEvent_Antrag" name="Antrag gestellt" camunda:modelerTemplate="start-event-easy-form-json-2.17.0" camunda:asyncAfter="true" camunda:formKey="embedded:/camunda/app/tasklist/ui-element-templates/startform/template.html?template=easy-form-template" camunda:initiator="antragsteller">
       <bpmn:extensionElements>
         <camunda:formData>
           <camunda:formField id="easyStartFormName" type="string" defaultValue="antragsformular" />
@@ -42,9 +43,6 @@
         </camunda:field>
         <camunda:field name="easyStartFormName">
           <camunda:string>easyStartFormName</camunda:string>
-        </camunda:field>
-        <camunda:field name="easyStartFormVersion">
-          <camunda:string>easyStartFormVersion</camunda:string>
         </camunda:field>
         <camunda:field name="formularStartContent">
           <camunda:string>formularStartContent</camunda:string>
@@ -77,14 +75,14 @@
     <bpmn:boundaryEvent id="Boundary_Timer" name="3 Tage ohne Entscheidung" cancelActivity="false" attachedToRef="Task_Pruefen">
       <bpmn:outgoing>Flow_Timer_Erinnern</bpmn:outgoing>
       <bpmn:timerEventDefinition id="TimerEventDefinition_1">
-        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">P3D</bpmn:timeDuration>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">PT3M</bpmn:timeDuration>
       </bpmn:timerEventDefinition>
     </bpmn:boundaryEvent>
 
-    <bpmn:sendTask id="Task_Erinnern" name="Erinnerung senden" camunda:expression="${execution.setVariable('erinnerungGesendet', true)}">
+    <bpmn:userTask id="Task_Erinnern" name="Erinnerung senden" camunda:candidateGroups="genehmiger">
       <bpmn:incoming>Flow_Timer_Erinnern</bpmn:incoming>
       <bpmn:outgoing>Flow_Erinnern_End</bpmn:outgoing>
-    </bpmn:sendTask>
+    </bpmn:userTask>
 
     <bpmn:endEvent id="End_Erinnert" name="Erinnert">
       <bpmn:incoming>Flow_Erinnern_End</bpmn:incoming>
@@ -106,16 +104,28 @@
       <bpmn:incoming>Flow_Verbuchen_End</bpmn:incoming>
     </bpmn:endEvent>
 
-    <bpmn:sendTask id="Task_Ablehnen" name="Ablehnung mitteilen" camunda:expression="${execution.setVariable('ablehnungMitgeteilt', true)}">
+    <bpmn:userTask id="Task_Ablehnen" name="Ablehnung mitteilen" camunda:candidateGroups="genehmiger">
       <bpmn:incoming>Flow_Abgelehnt</bpmn:incoming>
       <bpmn:outgoing>Flow_Ablehnen_End</bpmn:outgoing>
-    </bpmn:sendTask>
+    </bpmn:userTask>
 
     <bpmn:endEvent id="End_Abgelehnt" name="Antrag abgelehnt">
       <bpmn:incoming>Flow_Ablehnen_End</bpmn:incoming>
     </bpmn:endEvent>
 
-    <bpmn:userTask id="Task_Nachbessern" name="Antrag nachbessern" camunda:assignee="${antragsteller}">
+    <bpmn:userTask id="Task_Nachbessern" name="Antrag nachbessern" camunda:modelerTemplate="user-task-easy-form-json-3.0.1" camunda:asyncAfter="true" camunda:formKey="embedded:/camunda/app/tasklist/ui-element-templates/template.html" camunda:assignee="${antragsteller}">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="formReference">easy-form-template</camunda:inputParameter>
+          <camunda:inputParameter name="easyFormPresetValues" />
+          <camunda:inputParameter name="easyFormPresetVariables" />
+          <camunda:inputParameter name="dropdownChoice">no</camunda:inputParameter>
+          <camunda:inputParameter name="easyFormName">nachbesserungsformular</camunda:inputParameter>
+        </camunda:inputOutput>
+        <camunda:properties>
+          <camunda:property name="documentation" value="Einbindung von CIB easy-forms in Prozessen." />
+        </camunda:properties>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_Nachbesserung</bpmn:incoming>
       <bpmn:outgoing>Flow_Nachbessern_Pruefen</bpmn:outgoing>
     </bpmn:userTask>
@@ -125,10 +135,10 @@
         <bpmn:outgoing>Flow_Ruecknahme_Benachrichtigen</bpmn:outgoing>
         <bpmn:messageEventDefinition id="MessageEventDefinition_Ruecknahme" messageRef="Message_AntragZurueckgezogen" />
       </bpmn:startEvent>
-      <bpmn:sendTask id="Task_Benachrichtigen" name="Genehmigende Stelle benachrichtigen" camunda:expression="${execution.setVariable('stelleBenachrichtigt', true)}">
+      <bpmn:userTask id="Task_Benachrichtigen" name="Genehmigende Stelle benachrichtigen" camunda:assignee="${antragsteller}">
         <bpmn:incoming>Flow_Ruecknahme_Benachrichtigen</bpmn:incoming>
         <bpmn:outgoing>Flow_Benachrichtigen_End</bpmn:outgoing>
-      </bpmn:sendTask>
+      </bpmn:userTask>
       <bpmn:endEvent id="End_Zurueckgezogen" name="Antrag zurückgezogen">
         <bpmn:incoming>Flow_Benachrichtigen_End</bpmn:incoming>
       </bpmn:endEvent>
@@ -158,15 +168,6 @@
     </bpmn:textAnnotation>
     <bpmn:association id="Association_Worker" sourceRef="Task_Verbuchen" targetRef="Annotation_Worker" />
 
-    <bpmn:textAnnotation id="Annotation_Startform">
-      <bpmn:text>Startformular: Antrag</bpmn:text>
-    </bpmn:textAnnotation>
-    <bpmn:association id="Association_Startform" sourceRef="StartEvent_Antrag" targetRef="Annotation_Startform" />
-
-    <bpmn:textAnnotation id="Annotation_Taskform">
-      <bpmn:text>Task-Formular: Genehmigung</bpmn:text>
-    </bpmn:textAnnotation>
-    <bpmn:association id="Association_Taskform" sourceRef="Task_Pruefen" targetRef="Annotation_Taskform" />
   </bpmn:process>
 
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
@@ -241,12 +242,6 @@
       <bpmndi:BPMNShape id="Annotation_Worker_di" bpmnElement="Annotation_Worker">
         <dc:Bounds x="910" y="240" width="170" height="40" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Annotation_Startform_di" bpmnElement="Annotation_Startform">
-        <dc:Bounds x="200" y="180" width="140" height="34" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Annotation_Taskform_di" bpmnElement="Annotation_Taskform">
-        <dc:Bounds x="190" y="400" width="120" height="50" />
-      </bpmndi:BPMNShape>
 
       <bpmndi:BPMNShape id="SubProcess_Ruecknahme_di" bpmnElement="SubProcess_Ruecknahme" isExpanded="true">
         <dc:Bounds x="560" y="460" width="320" height="140" />
@@ -260,7 +255,7 @@
       </bpmndi:BPMNShape>
 
       <bpmndi:BPMNShape id="Task_Benachrichtigen_di" bpmnElement="Task_Benachrichtigen">
-        <dc:Bounds x="666" y="500" width="100" height="80" />
+        <dc:Bounds x="651" y="500" width="130" height="80" />
       </bpmndi:BPMNShape>
 
       <bpmndi:BPMNShape id="End_Zurueckgezogen_di" bpmnElement="End_Zurueckgezogen">
@@ -327,21 +322,13 @@
         <di:waypoint x="750" y="250" />
         <di:waypoint x="910" y="250" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Association_Startform_di" bpmnElement="Association_Startform">
-        <di:waypoint x="230" y="262" />
-        <di:waypoint x="240" y="214" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Association_Taskform_di" bpmnElement="Association_Taskform">
-        <di:waypoint x="345" y="320" />
-        <di:waypoint x="290" y="400" />
-      </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_Ruecknahme_Benachrichtigen_di" bpmnElement="Flow_Ruecknahme_Benachrichtigen">
         <di:waypoint x="626" y="540" />
-        <di:waypoint x="666" y="540" />
+        <di:waypoint x="651" y="540" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Benachrichtigen_End_di" bpmnElement="Flow_Benachrichtigen_End">
-        <di:waypoint x="766" y="540" />
+        <di:waypoint x="781" y="540" />
         <di:waypoint x="806" y="540" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>

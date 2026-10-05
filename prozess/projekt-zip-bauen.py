@@ -6,6 +6,7 @@ Aufbau wie ein Projekt-Export aus CIB flow:
     diagrams/genehmigungsworkflow.bpmn   aus prozess/genehmigungsworkflow.bpmn
     forms/antragsformular.json           aus prozess/formulare/antragsformular.json
     forms/genehmigungsformular.json      aus prozess/formulare/genehmigungsformular.json
+    forms/nachbesserungsformular.json    aus prozess/formulare/nachbesserungsformular.json
 
 Beim Import heißt jedes Formular wie seine Datei, das Modell verweist über diese Namen darauf.
 Feste Zeitstempel und keine Kompression: Dieselben Dateien ergeben byte-gleich dasselbe ZIP.
@@ -26,6 +27,7 @@ INHALT = {
     "diagrams/genehmigungsworkflow.bpmn": PROZESS / "genehmigungsworkflow.bpmn",
     "forms/antragsformular.json": PROZESS / "formulare" / "antragsformular.json",
     "forms/genehmigungsformular.json": PROZESS / "formulare" / "genehmigungsformular.json",
+    "forms/nachbesserungsformular.json": PROZESS / "formulare" / "nachbesserungsformular.json",
 }
 
 
