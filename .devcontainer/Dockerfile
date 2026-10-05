@@ -9,7 +9,8 @@ RUN apt-get install -y --no-install-recommends \
       dnsutils \
       iproute2 \
       iputils-ping \
-      net-tools
+      net-tools \
+      unzip
 
 RUN curl -o packages-microsoft-prod.deb https://packages.microsoft.com/config/debian/13/packages-microsoft-prod.deb \
     && dpkg -i packages-microsoft-prod.deb \
