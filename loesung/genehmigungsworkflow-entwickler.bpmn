@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Genehmigungsworkflow, Fassung des Entwickler-Tracks (Tag 2 ab 13:30, Kapitel 11 und 12).
-  Wie das fertige Modell nach Übung 7 (genehmigungsworkflow.bpmn), mit einer Änderung:
-  "Genehmigung verbuchen" ist kein User Task mehr, sondern ein Service Task als External Task mit dem
-  Topic genehmigung-verbuchen. Der C#-Worker holt ihn ab. Alle anderen Aufgaben bleiben User Tasks.
-  Die Entwickler bauen das in Übung 8 selbst um. Die ID Task_Verbuchen bleibt gleich.
-  Process_Genehmigung ist die ID der Vorlage: Setzt euren Key ein (z. B. mm-genehmigung).
+  Genehmigungsworkflow, Fassung nach Übung 8: wie das Modell nach Übung 7 (prozess/genehmigungsworkflow.bpmn),
+  „Genehmigung verbuchen“ ist ein External Task mit Topic genehmigung-verbuchen. Lösung von Übung 8.
+  Der C#-Worker holt ihn ab. Alle anderen Aufgaben bleiben User Tasks, die ID Task_Verbuchen bleibt gleich.
+
+  Die Formulare hängen wie nach Übung 7 über den Baustein „CIB easyForm“ am Modell, mit je einem
+  Speicherpunkt (camunda:asyncAfter) hinter dem Start-Event, „Antrag prüfen“ und „Antrag nachbessern“.
+  Der Timer „3 Tage ohne Entscheidung“ steht fürs Training auf PT3M.
+
+  Process_Genehmigung ist die ID der Vorlage, euer eigenes Modell trägt euren Key (ProzessKey in
+  appsettings.json). Diese Fassung passt zum Projekt-ZIP prozess/genehmigungsworkflow-projekt.zip, nicht zu
+  einem eigenen Projekt mit eigenem Key.
+
+  Diese Datei wird erzeugt, nicht von Hand ändern. Byte-gleiche Kopien:
+  prozesstest-java/src/main/resources/genehmigungsworkflow.bpmn
+  loesung/prozesstest-java/src/main/resources/genehmigungsworkflow.bpmn
 -->
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
@@ -13,14 +22,14 @@
                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
                   xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
                   id="Definitions_Genehmigungsworkflow"
-                  targetNamespace="https://bezirk-schwaben.miragon.io/schulung"
+                  targetNamespace="https://miragon.io/schulung/genehmigungsworkflow"
                   exporter="Miragon"
                   exporterVersion="1.0">
 
   <bpmn:message id="Message_AntragZurueckgezogen" name="antrag-zurueckgezogen" />
 
   <bpmn:collaboration id="Collaboration_Genehmigung">
-    <bpmn:participant id="Participant_Bezirk" name="Genehmigungsworkflow · Bezirk Schwaben" processRef="Process_Genehmigung" />
+    <bpmn:participant id="Participant_Genehmigung" name="Genehmigungsworkflow" processRef="Process_Genehmigung" />
   </bpmn:collaboration>
 
   <bpmn:process id="Process_Genehmigung" name="Genehmigungsworkflow" isExecutable="true" camunda:versionTag="1.0" camunda:historyTimeToLive="P365D">
@@ -66,7 +75,7 @@
     <bpmn:boundaryEvent id="Boundary_Timer" name="3 Tage ohne Entscheidung" cancelActivity="false" attachedToRef="Task_Pruefen">
       <bpmn:outgoing>Flow_Timer_Erinnern</bpmn:outgoing>
       <bpmn:timerEventDefinition id="TimerEventDefinition_1">
-        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">P3D</bpmn:timeDuration>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">PT3M</bpmn:timeDuration>
       </bpmn:timerEventDefinition>
     </bpmn:boundaryEvent>
 
@@ -164,7 +173,7 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_Genehmigung">
 
-      <bpmndi:BPMNShape id="Participant_Bezirk_di" bpmnElement="Participant_Bezirk" isHorizontal="true">
+      <bpmndi:BPMNShape id="Participant_Genehmigung_di" bpmnElement="Participant_Genehmigung" isHorizontal="true">
         <dc:Bounds x="130" y="60" width="980" height="570" />
       </bpmndi:BPMNShape>
 
