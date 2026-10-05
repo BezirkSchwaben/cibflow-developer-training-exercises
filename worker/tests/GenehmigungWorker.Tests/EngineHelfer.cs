@@ -125,7 +125,8 @@ public sealed class EngineHelfer : IDisposable
             : $"Instanzen mit diesem Business Key: {instanzen.Count}.";
         throw new InvalidOperationException(
             $"Kein External Task auf Topic {topic} für Business Key {businessKey}, auch nicht nach 45 Sekunden. " +
-            $"{zustand} Läuft euer Worker noch? Dann holt er den Task vor dem Test weg. Stoppt ihn für den Testlauf.");
+            $"{zustand} Läuft euer Worker noch? Dann holt er den Task vor dem Test weg. Stoppt ihn für den Testlauf. " +
+            "Oder liegt „Genehmigung verbuchen“ in der Aufgabenliste? Dann ist der Umbau aus Übung 8 nicht deployt.");
     }
 
     /// <summary>

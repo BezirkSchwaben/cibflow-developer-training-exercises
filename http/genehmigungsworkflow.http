@@ -30,6 +30,8 @@ Authorization: Basic {{worker}}:{{worker}}
 # deployment-name ist der Prozess-Key, wie bei "dotnet run -- deploy" im Worker.
 # enable-duplicate-filtering: unverändertes Modell erzeugt keine neue Version. Ausnahme: das erste
 # Deployment nach dem Import des Projekt-ZIPs, das Prozessmanagement stellt mit eigener Quelle bereit.
+# Vor dem Umbau in Übung 8 liegt dort das Modell ohne External Task. Die Schritte 6 und 7 brauchen
+# den Umbau, sonst liefert Schritt 6 dauerhaft [].
 POST {{baseUrl}}/deployment/create
 Authorization: Basic {{worker}}:{{worker}}
 Content-Type: multipart/form-data; boundary=GrenzeGenehmigung
@@ -51,7 +53,7 @@ Content-Type: application/xml
 
 
 ### 3. Prozess starten als anna: camunda:initiator legt "anna" in antragsteller ab
-# Der Start per REST umgeht das Startformular: betrag kommt als Zahl an, eine Anlage gibt es nicht.
+# Der Start per REST umgeht das Startformular: betrag kommt als Zahl an.
 # @name start
 POST {{baseUrl}}/process-definition/key/{{prozessKey}}/start
 Authorization: Basic {{antragstellerin}}:{{antragstellerin}}
@@ -80,6 +82,8 @@ Authorization: Basic {{genehmigerin}}:{{genehmigerin}}
 
 ### 5. Aufgabe mit entscheidung abschließen (genehmigt, abgelehnt oder nachbessern)
 # Nur genehmigt führt zum External Task. Bei abgelehnt oder nachbessern liefert Schritt 6 [].
+# Bei abgelehnt wartet "Ablehnung mitteilen" als Aufgabe bei der Gruppe genehmiger.
+# Schritt 4 noch einmal senden zeigt sie, die Instanz ist dann nicht COMPLETED.
 POST {{baseUrl}}/task/{{aufgabe.response.body.$[0].id}}/complete
 Authorization: Basic {{genehmigerin}}:{{genehmigerin}}
 Content-Type: application/json
@@ -136,7 +140,7 @@ Authorization: Basic {{worker}}:{{worker}}
 
 ### B1. Bonus Kapitel 12, fachlicher Fehler: Variante deployen
 # prozess/varianten/verbuchen-fehlerpfad.bpmn hat am Service Task "Genehmigung verbuchen"
-# ein Error-Boundary für BUCHUNG_ABGELEHNT, das zu "Buchung klären" führt. Die Vorlage hat keins.
+# ein Error-Boundary für BUCHUNG_ABGELEHNT, das zu "Buchung klären" führt. Euer Modell hat keins.
 # Gleich wirkt im Ordner worker/: dotnet run --project src/GenehmigungWorker -- deploy prozess/varianten/verbuchen-fehlerpfad.bpmn
 POST {{baseUrl}}/deployment/create
 Authorization: Basic {{worker}}:{{worker}}

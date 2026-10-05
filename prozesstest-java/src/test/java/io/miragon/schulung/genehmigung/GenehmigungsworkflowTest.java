@@ -121,11 +121,12 @@ class GenehmigungsworkflowTest {
     void timerSendetErinnerung() {
         // Starten:     wie oben, bis die Instanz genau bei "Task_Pruefen" wartet. Die Aufgabe bleibt offen.
         // Timer holen: Job timer = job("Boundary_Timer", antrag);
-        // Fälligkeit:  timer.getDuedate() liegt drei Tage in der Zukunft, auf eine Minute genau:
-        //              Date inDreiTagen = Date.from(Instant.now().plus(Duration.ofDays(3)));
-        //              Assertions.assertThat(timer.getDuedate()).isCloseTo(inDreiTagen, Duration.ofMinutes(1).toMillis());
+        // Fälligkeit:  timer.getDuedate() liegt drei Minuten in der Zukunft (im Modell PT3M, fachlich 3 Tage),
+        //              auf zehn Sekunden genau:
+        //              Date inDreiMinuten = Date.from(Instant.now().plus(Duration.ofMinutes(3)));
+        //              Assertions.assertThat(timer.getDuedate()).isCloseTo(inDreiMinuten, Duration.ofSeconds(10).toMillis());
         //              Hier mit "Assertions.": Das importierte assertThat kennt kein Datum.
-        // Auslösen:    execute(timer), statt drei Tage zu warten
+        // Auslösen:    execute(timer), statt zu warten
         // Warten:      jetzt an zwei Stellen, isWaitingAtExactly("Task_Pruefen", "Task_Erinnern"):
         //              Der Timer unterbricht nicht, "Erinnerung senden" kommt als zweite Aufgabe dazu
         // Erinnern:    complete(task("Task_Erinnern", antrag)). task() ohne ID scheitert bei zwei offenen Aufgaben

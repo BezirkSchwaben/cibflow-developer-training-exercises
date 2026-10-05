@@ -124,11 +124,11 @@ class GenehmigungsworkflowTest {
         speicherpunktAnstossen(antrag, "StartEvent_Antrag");
         assertThat(antrag).isWaitingAtExactly("Task_Pruefen");
 
-        // Der Timer ist in drei Tagen fällig. Nicht warten: den Timer-Job gezielt ausführen
+        // Fällig in drei Minuten (im Modell PT3M, fachlich 3 Tage). Nicht warten: den Timer-Job gezielt ausführen
         Job timer = job("Boundary_Timer", antrag);
-        Date inDreiTagen = Date.from(Instant.now().plus(Duration.ofDays(3)));
+        Date inDreiMinuten = Date.from(Instant.now().plus(Duration.ofMinutes(3)));
         Assertions.assertThat(timer.getDuedate()).as("Fälligkeit des Timers")
-            .isCloseTo(inDreiTagen, Duration.ofMinutes(1).toMillis());
+            .isCloseTo(inDreiMinuten, Duration.ofSeconds(10).toMillis());
         execute(timer);
 
         // Timer: nicht unterbrechend, danach sind zwei Aufgaben offen

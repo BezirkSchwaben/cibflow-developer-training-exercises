@@ -31,7 +31,7 @@ Musterlösung:
 cd loesung/worker
 dotnet test --filter "Kategorie!=Prozesstest"  # erwartet: 9 bestanden
 cd ../prozesstest-java
-./mvnw test                                    # erwartet: Tests run: 6, Skipped: 0
+./mvnw test                                    # erwartet: Tests run: 10, Skipped: 0
 cd ../..
 ```
 
@@ -57,7 +57,7 @@ cd stack
 cd ..
 ```
 
-Dabei darf kein Worker laufen.
+Dabei darf kein Worker laufen. Der Smoke-Test spielt die Entwickler-Fassung `loesung/genehmigungsworkflow-entwickler.bpmn` ein, mit „Genehmigung verbuchen“ als External Task. Danach ist sie die neueste Version in der Engine.
 
 ## 4. Worker starten
 
@@ -79,7 +79,9 @@ dotnet test                                    # erwartet: 12 bestanden
 cd ../..
 ```
 
+Voraussetzung ist Schritt 3: Ohne ihn liegt nur das Modell ohne External Task aus dem ZIP in der Engine, und `Genehmigter_Antrag_wird_verbucht` scheitert nach 45 Sekunden.
+
 ## Hinweise
 
 - Hakt ein Schritt, helfen die [typischen Probleme](README.md#typische-probleme). Meldet sonst den Schritt und die Fehlermeldung.
-- Aufräumen: im Ordner `stack/` mit `docker compose down`.
+- Aufräumen: im Ordner `stack/` mit `docker compose down`. Vor Übung 8 setzt ihr den Stack mit `docker compose down -v` zurück: Der Smoke-Test hat die Entwickler-Fassung eingespielt, und das Projekt ist schon importiert. Das löscht alle lokalen Projekte, Formulare und Instanzen.

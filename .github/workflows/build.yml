@@ -1,6 +1,6 @@
 # Prüft das Übungs-Repo bei jedem Push und Pull Request auf main.
 #
-#   startstand          Der Startstand unter worker/ (Ende der Übung in Kapitel 11) baut, und seine Tests laufen durch.
+#   startstand          Der Startstand unter worker/ (Ende von Übung 8) baut, und seine Tests laufen durch.
 #                       Die Tests mit TODO sind übersprungen, nicht rot. Dazu: Das Projekt-ZIP passt zum Modell,
 #                       und die Musterlösung unter loesung/ ist vollständig und weicht nur in den Übungsdateien
 #                       vom Startstand ab (.github/scripts/loesung-abgleich.sh).
