@@ -14,6 +14,9 @@ name: cibflow-training
 x-flow-dienst: &flow-dienst
   platform: linux/amd64
   restart: unless-stopped
+  environment:
+    - no_proxy=*
+    - NO_PROXY=*
   depends_on:
     rechte:
       condition: service_completed_successfully
@@ -23,7 +26,7 @@ services:
   # Engine: CIB seven mit REST-API unter http://localhost:8080/engine-rest
   flow-cibseven-spring:
     <<: *flow-dienst
-    image: harbor.cib.de/partner-miragon/images/flow-cibseven-spring:7.1.1
+    image: harbor.cib.de/customer-bezirk-schwaben/images/flow-cibseven-spring:7.1.1
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
@@ -37,7 +40,7 @@ services:
   # Weboberfläche: http://localhost:7083/client
   flow-webclient:
     <<: *flow-dienst
-    image: harbor.cib.de/partner-miragon/images/flow-webclient:6.5.1
+    image: harbor.cib.de/customer-bezirk-schwaben/images/flow-webclient:6.5.1
     ports:
       - "127.0.0.1:7083:8080"
     volumes:
@@ -47,7 +50,7 @@ services:
   # Zeigt die easyForms beim Prozessstart und in den Aufgaben. Ohne diesen Dienst bleiben die Formulare leer.
   ui-element-template:
     <<: *flow-dienst
-    image: harbor.cib.de/partner-miragon/images/flow-ui-element-templates:5.4.6
+    image: harbor.cib.de/customer-bezirk-schwaben/images/flow-ui-element-templates:5.4.6
     ports:
       - "127.0.0.1:7091:8080"
     volumes:
@@ -57,7 +60,7 @@ services:
   # Formular-Editor und Formularspeicher
   easy-form:
     <<: *flow-dienst
-    image: harbor.cib.de/partner-miragon/images/easy-form:3.1.3
+    image: harbor.cib.de/customer-bezirk-schwaben/images/easy-form:3.1.3
     ports:
       - "127.0.0.1:7086:8080"
     volumes:
@@ -68,7 +71,7 @@ services:
   # Modeler
   flow-modeler:
     <<: *flow-dienst
-    image: harbor.cib.de/partner-miragon/images/flow-modeler:3.0.13
+    image: harbor.cib.de/customer-bezirk-schwaben/images/flow-modeler:3.0.13
     ports:
       - "127.0.0.1:7088:8080"
     volumes:
@@ -79,7 +82,7 @@ services:
   # Prozessmanagement: Projekt-ZIP importieren und bereitstellen
   flow-process-management:
     <<: *flow-dienst
-    image: harbor.cib.de/partner-miragon/images/flow-process-management:2.0.2
+    image: harbor.cib.de/customer-bezirk-schwaben/images/flow-process-management:2.0.2
     ports:
       - "127.0.0.1:7089:8080"
     volumes:
@@ -90,7 +93,7 @@ services:
   # Ressourcen eines Projekts (Ordner resources/ im Projekt-ZIP)
   flow-resource:
     <<: *flow-dienst
-    image: harbor.cib.de/partner-miragon/images/flow-resource:3.0.4
+    image: harbor.cib.de/customer-bezirk-schwaben/images/flow-resource:3.0.4
     ports:
       - "127.0.0.1:7090:8080"
     volumes:
@@ -118,6 +121,8 @@ services:
     depends_on:
       - flow-cibseven-spring
     environment:
+      no_proxy: "*"
+      NO_PROXY: "*"
       ENGINE_URL: http://flow-cibseven-spring:8080/engine-rest
       ADMIN_USER: demo
       ADMIN_PASSWORD: demo
