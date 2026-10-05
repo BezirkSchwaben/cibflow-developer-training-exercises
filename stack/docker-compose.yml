@@ -6,7 +6,7 @@
 # Stoppen:   docker compose down
 # Zurück auf null (löscht Deployments, Formulare, Benutzer): docker compose down -v
 #
-# Alle Ports hören nur auf 127.0.0.1, von außen ist nichts erreichbar.
+# Alle Ports hören nur auf 127.0.0.1, von außen ist nichts erreichbar...
 name: cibflow-training
 
 # Gemeinsame Einstellungen der sieben CIB flow Dienste.
