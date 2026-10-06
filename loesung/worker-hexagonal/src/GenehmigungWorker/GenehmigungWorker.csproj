@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>GenehmigungWorker</RootNamespace>
+    <!-- Zugangsdaten per "dotnet user-secrets set ..." liegen außerhalb des Repos, siehe aufgaben/kapitel-11-lokales-setup.md -->
+    <UserSecretsId>cibflow-training-genehmigung-worker</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Nur Konfiguration: appsettings.json, Umgebungsvariablen und User Secrets.
+         HttpClient und System.Text.Json bringt .NET selbst mit. -->
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Die Adapter kennen die Domäne, die Domäne kennt die Adapter nicht: Die Abhängigkeit zeigt nach innen. -->
+    <ProjectReference Include="..\GenehmigungWorker.Domaene\GenehmigungWorker.Domaene.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

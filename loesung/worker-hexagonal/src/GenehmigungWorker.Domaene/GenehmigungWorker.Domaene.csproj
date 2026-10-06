@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Die Mitte des Sechsecks: die Fachlogik "Genehmigung verbuchen" und ihre Ports.
+       Absichtlich ohne PackageReference und ohne ProjectReference. So verhindert schon der Compiler,
+       dass die Domäne die Engine kennt: Ein "using GenehmigungWorker.Adapter.Engine;" hier baut nicht.
+       Die Abhängigkeit zeigt nur nach innen, GenehmigungWorker.csproj referenziert dieses Projekt, nie umgekehrt.
+       Was trotzdem durchrutschen könnte, etwa ein Paket mit HTTP-Client, fängt tests/.../ArchitekturTests.cs,
+       sobald die Domäne einen Typ daraus benutzt. -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>GenehmigungWorker.Domaene</RootNamespace>
+  </PropertyGroup>
+
+</Project>

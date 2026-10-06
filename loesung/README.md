@@ -1,6 +1,6 @@
 # Musterlösung zu Übung 8 und 9
 
-Für Übung 8 das umgebaute Modell `genehmigungsworkflow-entwickler.bpmn`. Für Übung 9 zwei vollständige Projekte mit demselben Aufbau wie der Startstand: `worker/` (C#) und `prozesstest-java/` (Java). Ihr baut und testet sie hier, ohne etwas über euren Stand zu kopieren.
+Für Übung 8 das umgebaute Modell `genehmigungsworkflow-entwickler.bpmn`. Für Übung 9 zwei vollständige Projekte mit demselben Aufbau wie der Startstand: `worker/` (C#) und `prozesstest-java/` (Java). Ihr baut und testet sie hier, ohne etwas über euren Stand zu kopieren. Dazu liegt unter `worker-hexagonal/` derselbe Worker noch einmal, nach Ports und Adaptern geschnitten, zum Lesen und Vergleichen. Unter `element-template/` liegt die Lösung des Bonus „Euer Worker als Baustein“.
 
 ## Lösung von Übung 8
 
@@ -53,3 +53,22 @@ Nach einem Build zeigen die ersten beiden Befehle auch die Build-Ausgaben unter 
 Was jede Datei macht und wie ihr einzelne übernehmt, steht im Aufgabenblatt unter [Übung 9, Musterlösung](../aufgaben/kapitel-12-worker-und-tests.md#musterlösung).
 
 Für Trainer: `.github/scripts/loesung-abgleich.sh` prüft, auch in der CI, dass die Musterlösung jede Datei des Startstands enthält und nur in den Übungsdateien abweicht. Die Liste der Übungsdateien steht im Skript.
+
+## Hexagonale Fassung
+
+`worker-hexagonal/` macht dasselbe wie `worker/`, mit denselben Logzeilen, Variablen und Fehlern. Die Fachlogik steht dort in einem eigenen Projekt, `GenehmigungWorker.Domaene`, das die Engine nicht kennt: Zwischen Engine und Fachlogik stehen Adapter, und die Fachlogik spricht nur über ihre Ports nach außen. In Übung 9 baut ihr die Schichten-Fassung wie unter `worker/`, umbauen müsst ihr nichts. Was anders ist, warum und wo der Schnitt an Grenzen stößt, steht in [worker-hexagonal/README.md](worker-hexagonal/README.md).
+
+Vom Repo-Root aus, in bash und PowerShell gleich:
+
+```bash
+cd loesung/worker-hexagonal
+dotnet test --filter "Kategorie!=Prozesstest"   # ohne Engine: 14 Tests
+dotnet test                                     # mit laufendem Stack und bereitgestelltem Modell: 17 Tests
+dotnet run --project src/GenehmigungWorker      # startet den Worker der hexagonalen Fassung
+```
+
+Zugangsdaten und `ProzessKey` gelten wie für `worker/`, und auch hier stoppt ihr vorher euren eigenen Worker. Für Trainer: `.github/scripts/loesung-abgleich.sh` prüft auch, dass die Dateien, die `worker-hexagonal/` unverändert aus `worker/` übernimmt, gleich bleiben.
+
+## Element Template
+
+`element-template/genehmigung-verbuchen.json` macht euren Worker zu einem Baustein im Katalog des Modelers: Der Service Task bekommt `camunda:type` external und das Topic `genehmigung-verbuchen` fest aus der Vorlage, der Katalog zeigt ihn im Abschnitt „Genehmigungsworkflow“ als „Extern“ mit Version 1.0.0. Hochladen, anwenden und deployen erklärt das Aufgabenblatt unter [Bonus: Euer Worker als Baustein](../aufgaben/kapitel-12-worker-und-tests.md#bonus-euer-worker-als-baustein). Für Trainer: Die GitHub Action prüft, dass Typ und Topic der Vorlage zu `Task_Verbuchen` in `genehmigungsworkflow-entwickler.bpmn` passen.
