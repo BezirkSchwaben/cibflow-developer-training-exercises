@@ -112,8 +112,9 @@ cibflow-developer-training-exercises/
 │   ├── worker/                         # der fertige Worker mit allen Tests, gleicher Aufbau wie worker/
 │   ├── worker-hexagonal/               # derselbe Worker nach Ports und Adaptern geschnitten, zum Vergleich, Anleitung in seiner README.md
 │   ├── element-template/               # Bonus in Übung 9: euer Worker als Baustein im Katalog des Modelers
-│   └── prozesstest-java/               # die fertigen Prozesstests in Java, hier läuft die Demo zu Kapitel 10
-└── .github/                            # CI: baut und testet Startstand und Musterlösung, in C# und Java
+│   ├── prozesstest-java/               # die fertigen Prozesstests in Java, hier läuft die Demo zu Kapitel 10
+│   └── prozesstest-jgiven/             # Ausblick in Kapitel 10: derselbe Prozesstest als Szenario mit JGiven, kein Teil einer Übung
+└── .github/                            # CI: baut und testet Startstand und Musterlösung, in C# und Java, dazu die JGiven-Demo
 ```
 
 ## Für Trainer
@@ -124,7 +125,9 @@ Ob das Repo auf einem Rechner läuft, prüft ihr in fünf Schritten mit dem [Set
 
 Die Demo in Kapitel 10 läuft in `loesung/prozesstest-java/` mit der Klasse `GenehmigungsworkflowTag1Test` am Modell ohne External Task, dort liegt der fertige Test schon. Das Modell ändert ihr vorübergehend nur in `loesung/prozesstest-java/src/main/resources/genehmigungsworkflow-tag1.bpmn`, zurück geht es im Repo-Root mit `git restore loesung/prozesstest-java`. Der Startstand `prozesstest-java/` bleibt für die Übung unberührt. Vorbereitung, Ablauf und die erwarteten Meldungen stehen in [prozesstest-java/README.md](prozesstest-java/README.md#demo-kapitel-10-trainer).
 
-Die GitHub Action `.github/workflows/build.yml` baut und testet bei jedem Push Startstand und Musterlösung, jeweils in C# und in Java, in C# auch die hexagonale Fassung unter `loesung/worker-hexagonal/`. Warum sie für die Musterlösung eine eigene Engine aus `.github/ci-stack/` startet, steht im Kommentar der Datei. Dazu prüft `.github/scripts/loesung-abgleich.sh`, auch in der CI, dass die Musterlösung jede Datei des Startstands enthält und nur in den Übungsdateien abweicht, und dass die hexagonale Fassung die Dateien, die sie aus `loesung/worker/` übernimmt, unverändert lässt. Die Listen stehen im Skript.
+Den Ausblick in Kapitel 10, denselben Prozesstest als Szenario mit JGiven, zeigt ihr in `loesung/prozesstest-jgiven/`: `./mvnw test` schreibt die Szenarien in Angenommen, Wenn, Dann auf die Konsole, `./mvnw jgiven:report` baut danach den HTML-Bericht. Ein eigenes Projekt, die anderen Java-Projekte laden JGiven nicht. Lasst beide Befehle einmal vorab mit Netz laufen, zusammen laden sie rund 31 MB nach. Alles Weitere steht in [loesung/prozesstest-jgiven/README.md](loesung/prozesstest-jgiven/README.md).
+
+Die GitHub Action `.github/workflows/build.yml` baut und testet bei jedem Push Startstand und Musterlösung, jeweils in C# und in Java, in C# auch die hexagonale Fassung unter `loesung/worker-hexagonal/`, dazu die Szenarien unter `loesung/prozesstest-jgiven/`. Warum sie für die Musterlösung eine eigene Engine aus `.github/ci-stack/` startet, steht im Kommentar der Datei. Dazu prüft `.github/scripts/loesung-abgleich.sh`, auch in der CI, dass die Musterlösung jede Datei des Startstands enthält und nur in den Übungsdateien abweicht, und dass die hexagonale Fassung die Dateien, die sie aus `loesung/worker/` übernimmt, unverändert lässt. Die Listen stehen im Skript.
 
 ## Lizenz
 

@@ -1,6 +1,6 @@
 # Musterlösung zu Übung 8 und 9
 
-Für Übung 8 das umgebaute Modell `genehmigungsworkflow-entwickler.bpmn`. Für Übung 9 zwei vollständige Projekte mit demselben Aufbau wie der Startstand: `worker/` (C#) und `prozesstest-java/` (Java). Ihr baut und testet sie hier, ohne etwas über euren Stand zu kopieren. Dazu liegt unter `worker-hexagonal/` derselbe Worker noch einmal, nach Ports und Adaptern geschnitten, zum Lesen und Vergleichen. Unter `element-template/` liegt die Lösung des Bonus „Euer Worker als Baustein“.
+Für Übung 8 das umgebaute Modell `genehmigungsworkflow-entwickler.bpmn`. Für Übung 9 zwei vollständige Projekte mit demselben Aufbau wie der Startstand: `worker/` (C#) und `prozesstest-java/` (Java). Ihr baut und testet sie hier, ohne etwas über euren Stand zu kopieren. Dazu liegt unter `worker-hexagonal/` derselbe Worker noch einmal, nach Ports und Adaptern geschnitten, zum Lesen und Vergleichen. Unter `element-template/` liegt die Lösung des Bonus „Euer Worker als Baustein“. Unter `prozesstest-jgiven/` liegt der Ausblick aus Kapitel 10, kein Teil einer Übung.
 
 ## Lösung von Übung 8
 
@@ -74,3 +74,17 @@ Zugangsdaten und `ProzessKey` gelten wie für `worker/`, und auch hier stoppt ih
 ## Element Template
 
 `element-template/genehmigung-verbuchen.json` macht euren Worker zu einem Baustein im Katalog des Modelers: Der Service Task bekommt `camunda:type` external und das Topic `genehmigung-verbuchen` fest aus der Vorlage, der Katalog zeigt ihn im Abschnitt „Genehmigungsworkflow“ als „Extern“ mit Version 1.0.0. Hochladen, anwenden und deployen erklärt das Aufgabenblatt unter [Bonus: Euer Worker als Baustein](../aufgaben/kapitel-12-worker-und-tests.md#bonus-euer-worker-als-baustein). Für Trainer: Die GitHub Action prüft, dass Typ und Topic der Vorlage zu `Task_Verbuchen` in `genehmigungsworkflow-entwickler.bpmn` passen.
+
+## JGiven-Demo (Ausblick in Kapitel 10)
+
+`prozesstest-jgiven/` zeigt den Prozesstest der Demo in Kapitel 10 als Szenario mit [JGiven](https://jgiven.org) und der Community-Extension [CIB seven BPM JGiven](https://github.com/cibseven-community-hub/cibseven-bpm-jgiven): Happy Path und Ablehnung am selben Modell ohne External Task, mit derselben Engine im Speicher. Die Testmethode liest sich in Angenommen, Wenn, Dann, Konsole und HTML-Bericht zeigen die Schritte als Sätze mit den Beschriftungen aus dem Modell. Kein Teil einer Übung, ein eigenes Projekt: `prozesstest-java/` lädt JGiven nicht.
+
+Vom Repo-Root aus:
+
+```bash
+cd loesung/prozesstest-jgiven
+./mvnw test              # 2 Szenarien, in PowerShell: .\mvnw.cmd test
+./mvnw jgiven:report     # danach: target/jgiven-reports/html/index.html
+```
+
+Den Abdeckungsbericht schreibt schon der Testlauf, unter `target/process-test-coverage/`. Was die Szenarien zeigen, wie sie aufgebaut sind und wie viel der erste Lauf lädt, steht in [prozesstest-jgiven/README.md](prozesstest-jgiven/README.md). Für Trainer: Die GitHub Action prüft, dass die Modellkopie `prozesstest-jgiven/src/main/resources/genehmigungsworkflow-tag1.bpmn` byte-gleich zu `prozess/genehmigungsworkflow.bpmn` bleibt und beide Szenarien grün sind.

@@ -99,7 +99,7 @@ target/process-test-coverage/io.miragon.schulung.genehmigung.Genehmigungsworkflo
 
 Öffnet die Datei im Browser, per Doppelklick oder im Ordner `prozesstest-java/` mit `open target/process-test-coverage/*/report.html` (macOS) oder `start target\process-test-coverage\io.miragon.schulung.genehmigung.GenehmigungsworkflowTest\report.html` (Windows). Der Bericht braucht kein Netz, jeder Lauf schreibt ihn neu.
 
-Er zeigt das Modell: Grün gefüllt sind die Elemente, die die Tests der Klasse durchlaufen haben, dunkelgrün die Pfeile. Darunter steht unter „Run Selection“ die Klasse mit `Covered`, `Total` und `Coverage`: wie viele Elemente und Pfeile (Sequence Flows) des Modells die Tests durchlaufen haben, von wie vielen, in Prozent. Das Feld `Coverage` ist ab 90 % grün, ab 50 % gelb, darunter rot. Ein Klick auf die Zeile klappt die Testmethoden auf, ein Klick auf eine Methode zeigt nur ihren Pfad. Im Startstand läuft nur der Happy Path, 9 von 27, `33.33%`. Mit Ablehnung und Nachbesserung sind es 16 von 27, `59.26%`, mit dem Timer 21 von 27, `77.78%`. Weiß bleibt dann nur noch die Rücknahme, für sie gibt es keinen Test. Eine Mindestabdeckung verlangen die Tests nicht, ein Bericht mit wenig Grün macht keinen Test rot.
+Er zeigt das Modell: Grün gefüllt sind die Elemente, die die Tests der Klasse durchlaufen haben. Die Pfeile, die sie genommen haben, tragen eine dunkelgrüne Spitze, die Linie bleibt schwarz. Darunter steht unter „Run Selection“ die Klasse mit `Covered`, `Total` und `Coverage`: wie viele Elemente und Pfeile (Sequence Flows) des Modells die Tests durchlaufen haben, von wie vielen, in Prozent. Das Feld `Coverage` ist ab 90 % grün, ab 50 % gelb, darunter rot. Ein Klick auf die Zeile klappt die Testmethoden auf, ein Klick auf eine Methode zeigt nur ihren Pfad. Im Startstand läuft nur der Happy Path, 9 von 27, `33.33%`. Mit Ablehnung und Nachbesserung sind es 16 von 27, `59.26%`, mit dem Timer 21 von 27, `77.78%`. Weiß bleibt dann nur noch die Rücknahme, für sie gibt es keinen Test. Eine Mindestabdeckung verlangen die Tests nicht, ein Bericht mit wenig Grün macht keinen Test rot.
 
 ## Übung 9 (Kapitel 12)
 
@@ -209,12 +209,13 @@ Darunter steht `Tests run: 4, Failures: 0, Errors: 1, Skipped: 0`. Danach wie na
 
 ## Modellkopien nachziehen
 
-Ändert sich ein Modell unter `prozess/` oder die Entwickler-Fassung unter `loesung/`, kopiert ihr es im Repo-Root neu nach `src/main/resources/`, im Startstand und in der Musterlösung. Die Klassen mit den IDs zieht ihr nicht nach, der nächste Lauf erzeugt sie aus den neuen Kopien:
+Ändert sich ein Modell unter `prozess/` oder die Entwickler-Fassung unter `loesung/`, kopiert ihr es im Repo-Root neu nach `src/main/resources/`, im Startstand, in der Musterlösung und in der JGiven-Demo unter `loesung/prozesstest-jgiven/`. Die Klassen mit den IDs zieht ihr nicht nach, der nächste Lauf erzeugt sie aus den neuen Kopien:
 
 ```bash
 cp loesung/genehmigungsworkflow-entwickler.bpmn prozesstest-java/src/main/resources/genehmigungsworkflow.bpmn
 cp loesung/genehmigungsworkflow-entwickler.bpmn loesung/prozesstest-java/src/main/resources/genehmigungsworkflow.bpmn
 cp prozess/genehmigungsworkflow.bpmn loesung/prozesstest-java/src/main/resources/genehmigungsworkflow-tag1.bpmn
+cp prozess/genehmigungsworkflow.bpmn loesung/prozesstest-jgiven/src/main/resources/genehmigungsworkflow-tag1.bpmn
 cp prozess/varianten/verbuchen-fehlerpfad.bpmn prozesstest-java/src/main/resources/
 cp prozess/varianten/verbuchen-fehlerpfad.bpmn loesung/prozesstest-java/src/main/resources/
 ```
