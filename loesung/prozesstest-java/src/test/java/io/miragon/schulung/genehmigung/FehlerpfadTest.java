@@ -18,7 +18,7 @@ import org.assertj.core.api.Assertions;
 import org.cibseven.bpm.engine.externaltask.LockedExternalTask;
 import org.cibseven.bpm.engine.runtime.ProcessInstance;
 import org.cibseven.bpm.engine.test.Deployment;
-import org.cibseven.bpm.engine.test.junit5.ProcessEngineExtension;
+import org.cibseven.community.process_test_coverage.junit5.platform7.ProcessEngineCoverageExtension;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -38,7 +38,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * Lauf aus src/main/resources/verbuchen-fehlerpfad.bpmn erzeugt: BUCHUNG_ABGELEHNT.getCode() ist der errorCode
  * des Modells, TASK_BUCHUNG_KLAEREN.getValue() die ID von "Buchung klären".
  */
-@ExtendWith(ProcessEngineExtension.class)
+@ExtendWith(ProcessEngineCoverageExtension.class)
 @Deployment(resources = "verbuchen-fehlerpfad.bpmn")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Fehlerpfad (Variante)")

@@ -36,6 +36,8 @@ cd loesung/prozesstest-java
 
 Die Java-Tests `GenehmigungsworkflowTest` und `FehlerpfadTest` lesen Process ID, IDs, Topic und Fehlercode aus Klassen, die bpmn-to-code bei jedem Lauf aus den Modellkopien erzeugt, etwa `TASK_PRUEFEN.getValue()` statt `"Task_Pruefen"`. Wie das geht, steht in [prozesstest-java/README.md](../prozesstest-java/README.md#ids-aus-dem-modell). Die Demo-Klasse `GenehmigungsworkflowTag1Test` schreibt die IDs bewusst als Text, siehe [Demo](../prozesstest-java/README.md#demo-kapitel-10-trainer).
 
+Nach dem Lauf liegt je Testklasse ein Abdeckungsbericht unter `loesung/prozesstest-java/target/process-test-coverage/<Testklasse>/report.html`, etwa `io.miragon.schulung.genehmigung.GenehmigungsworkflowTest/report.html`. Öffnet ihn im Browser: Er zeigt das Modell, darin grün, was die Tests durchlaufen haben, und die Abdeckung in Prozent. In der Musterlösung sind es für `GenehmigungsworkflowTest` und `GenehmigungsworkflowTag1Test` je 21 von 27, `77.78%`, weiß bleibt die Rücknahme, für `FehlerpfadTest` 12 von 12, `100.00%`. Was der Bericht zeigt, steht in [prozesstest-java/README.md](../prozesstest-java/README.md#abdeckung-im-modell).
+
 Die User Secrets aus Übung 8 gelten auch hier, beide Worker-Projekte haben dieselbe `UserSecretsId`. Mit eigenem Projekt tragt ihr euren `ProzessKey` auch in `loesung/worker/src/GenehmigungWorker/appsettings.json` ein.
 
 ## Mit eurem Stand vergleichen

@@ -17,7 +17,8 @@
 #                       übersprungen, nicht rot. Dazu: Die Modellkopie der Demo in Kapitel 10 ist der Startstand.
 #   java-musterloesung  Die Musterlösung unter loesung/prozesstest-java/, ein vollständiges Projekt:
 #                       alle Tests grün, keiner übersprungen, die Demo-Tests am Modell ohne External Task und
-#                       der Bonus Fehlerpfad eingeschlossen.
+#                       der Bonus Fehlerpfad eingeschlossen. Die Abdeckungsberichte je Testklasse
+#                       (target/process-test-coverage) lädt der Job als Artefakt abdeckung-musterloesung hoch.
 #                       Die Java-Jobs brauchen weder Docker noch Zugangsdaten, die Engine läuft im Speicher.
 #
 # Warum die CI gegen reines CIB seven läuft und nicht gegen den CIB flow Stack aus stack/:
@@ -353,3 +354,12 @@ jobs:
             echo "::error::Die Demo-Tests am Modell ohne External Task (GenehmigungsworkflowTag1Test) sind nicht gelaufen"
             exit 1
           fi
+
+      # Je Testklasse ein HTML-Bericht: das Modell, darin grün, was die Tests durchlaufen haben. Zum Ansehen
+      # entpacken und report.html im Browser öffnen. Fehlen die Berichte trotz grüner Tests, wird der Job rot.
+      - name: Abdeckungsberichte hochladen
+        uses: actions/upload-artifact@v7
+        with:
+          name: abdeckung-musterloesung
+          path: loesung/prozesstest-java/target/process-test-coverage/
+          if-no-files-found: error

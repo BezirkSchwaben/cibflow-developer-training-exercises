@@ -21,7 +21,7 @@ import org.assertj.core.api.Assertions;
 import org.cibseven.bpm.engine.runtime.Job;
 import org.cibseven.bpm.engine.runtime.ProcessInstance;
 import org.cibseven.bpm.engine.test.Deployment;
-import org.cibseven.bpm.engine.test.junit5.ProcessEngineExtension;
+import org.cibseven.community.process_test_coverage.junit5.platform7.ProcessEngineCoverageExtension;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -44,7 +44,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * Die Prüfungen der Engine erwarten die ID als Text, deshalb TASK_PRUEFEN.getValue().
  * Ändert jemand eine ID im Modell, übersetzt der Test nicht mehr, und Maven nennt jede Zeile mit der alten ID.
  */
-@ExtendWith(ProcessEngineExtension.class)
+@ExtendWith(ProcessEngineCoverageExtension.class)
 @Deployment(resources = "genehmigungsworkflow.bpmn")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Genehmigungsworkflow")

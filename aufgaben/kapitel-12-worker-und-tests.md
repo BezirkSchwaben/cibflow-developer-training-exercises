@@ -8,7 +8,7 @@ Euer Worker aus Übung 8 holt den Task schon, verbucht aber nichts. Am Ende verb
 
 - Der Prozesstest in C# nimmt den Prozess-Key als `_engine.ProzessKey` aus `appsettings.json`: `Process_Genehmigung` mit dem Projekt-ZIP aus dem Repo, euer eigener Key mit eurem Projekt. Auf der Folie steht an dieser Stelle `"mm-genehmigung"`.
 - `betrag` kommt je nach Weg verschieden an: aus dem easyForm als Text, etwa `"1234.5"`, immer mit Punkt, per REST und im Prozesstest als Zahl (`long`). Der Handler muss beides lesen, Schritt 1 zeigt wie.
-- Für den Prozesstest in Java (Schritt 5) braucht ihr JDK 21 (`java -version`). Habt ihr im Ordner `prozesstest-java/` noch nie `./mvnw test` laufen lassen (Windows: `.\mvnw.cmd test`) oder seit dem letzten Lauf `git pull` gemacht, startet es gleich zu Beginn in einem zweiten Terminal, mit Netz. Der erste Lauf lädt Maven und die Bibliotheken, rund 65 MB, nach einem `git pull` nur, was dazugekommen ist. Scheitert er mit `PKIX path building failed` oder `Could not transfer artifact`, steht unter [Meldungen aus dem Prozesstest in Java](#meldungen-aus-dem-prozesstest-in-java), was ihr tut.
+- Für den Prozesstest in Java (Schritt 5) braucht ihr JDK 21 (`java -version`). Habt ihr im Ordner `prozesstest-java/` noch nie `./mvnw test` laufen lassen (Windows: `.\mvnw.cmd test`) oder seit dem letzten Lauf `git pull` gemacht, startet es gleich zu Beginn in einem zweiten Terminal, mit Netz. Der erste Lauf lädt Maven und die Bibliotheken, rund 70 MB, nach einem `git pull` nur, was dazugekommen ist. Scheitert er mit `PKIX path building failed` oder `Could not transfer artifact`, steht unter [Meldungen aus dem Prozesstest in Java](#meldungen-aus-dem-prozesstest-in-java), was ihr tut.
 
 ## Ausgangslage
 
@@ -122,7 +122,7 @@ Der Prozesstest braucht, was auch der Worker braucht: laufenden Stack, bereitges
 
 ### 5. Prozesstest in Java
 
-Ordner `prozesstest-java/`, Datei `src/test/java/io/miragon/schulung/genehmigung/GenehmigungsworkflowTest.java`, Folie „Prozesstest in Java“, dazu aus Kapitel 10 „Ein Testfall in fünf Schritten“ und „Was ein Prozesstest prüft“.
+Ordner `prozesstest-java/`, Datei `src/test/java/io/miragon/schulung/genehmigung/GenehmigungsworkflowTest.java`, Folie „Prozesstest in Java“, dazu aus Kapitel 10 die fünf Schritte eines Testfalls und „Was ein Prozesstest prüft“.
 
 Der Test startet die Engine selbst, im Speicher, und braucht weder Stack noch Worker. Der Happy Path ist fertig, ihr schreibt Ablehnung und Nachbesserung, wer schneller ist, auch den Timer. Befehle für Windows, die Ausgabe im Startstand und warum der Test die Speicherpunkte selbst anstößt, stehen in der [README des Projekts](../prozesstest-java/README.md).
 
@@ -133,7 +133,7 @@ cd ../prozesstest-java     # aus worker/, aus dem Repo-Root: cd prozesstest-java
 
 IDs schreibt ihr nicht als Text. Bei jedem Lauf erzeugt bpmn-to-code aus dem Modell die Klasse `ProcessGenehmigungProcessApi`, darin jede ID als Konstante: aus `Task_Ablehnen` wird `TASK_ABLEHNEN`, aus `End_Abgelehnt` wird `END_ABGELEHNT`. Alle sind schon importiert. Die Prüfungen erwarten die ID als Text, deshalb `TASK_ABLEHNEN.getValue()`. Nur `speicherpunktAnstossen` nimmt die Konstante selbst, etwa `speicherpunktAnstossen(antrag, TASK_PRUEFEN)`. Woher die Klasse kommt und wo sie liegt, steht in der README unter [IDs aus dem Modell](../prozesstest-java/README.md#ids-aus-dem-modell).
 
-1. Lest den Happy Path `genehmigterAntragWirdVerbucht`. Seine Kommentare nummerieren die fünf Schritte der Folie: Starten, Warten, Entscheiden, Verbuchen, Beenden. Jede Zeile mit `assertThat` ist eine Prüfung.
+1. Lest den Happy Path `genehmigterAntragWirdVerbucht`. Seine Kommentare nummerieren die fünf Schritte eines Testfalls: Starten, Warten, Entscheiden, Verbuchen, Beenden. Jede Zeile mit `assertThat` ist eine Prüfung.
 2. **Ablehnung**, `abgelehnterAntragWirdMitgeteilt`: starten, Speicherpunkt nach dem Start anstoßen, „Antrag prüfen“ mit `entscheidung` gleich `abgelehnt` abschließen, Speicherpunkt nach „Antrag prüfen“ anstoßen. Jetzt wartet die Instanz genau bei `TASK_ABLEHNEN`: „Ablehnung mitteilen“ ist eine Aufgabe. Schließt sie mit `complete(task())` ab. Erst dann prüfen: Instanz beendet, `TASK_ABLEHNEN` und `END_ABGELEHNT` durchlaufen, `TASK_VERBUCHEN` und `END_GENEHMIGT` nicht, `buchungsnummer` fehlt.
 3. **Nachbesserung**, `nachbesserungFuehrtZurueckZurPruefung`: genauso, aber mit `nachbessern`. Jetzt wartet `TASK_NACHBESSERN`, zugewiesen an `anna`. Diese Aufgabe schließt ihr ohne Variablen ab. Danach stoßt ihr den Speicherpunkt nach „Antrag nachbessern“ an, `speicherpunktAnstossen(antrag, TASK_NACHBESSERN)`: Seit Übung 7 hängt dort ein easyForm, und der Baustein setzt einen Speicherpunkt hinter die Aufgabe. Erst dann wartet die Instanz wieder bei `TASK_PRUEFEN`, und die Aufgabe liegt wieder bei der Gruppe `genehmiger`.
 4. **Timer**, `timerSendetErinnerung`, für alle, die schneller sind: Den Timer-Job `BOUNDARY_TIMER` holen, seine Fälligkeit prüfen (in drei Minuten, auf zehn Sekunden genau: „3 Tage ohne Entscheidung“ steht im Modell fürs Training auf `PT3M`) und ihn ausführen, statt zu warten. Danach wartet die Instanz an zwei Stellen, `isWaitingAtExactly(TASK_PRUEFEN.getValue(), TASK_ERINNERN.getValue())`: Der Timer unterbricht nicht, „Erinnerung senden“ kommt als zweite Aufgabe dazu. Schließt sie mit `complete(task(TASK_ERINNERN.getValue(), antrag))` ab. Danach wartet die Instanz wieder genau bei `TASK_PRUEFEN`, `TASK_ERINNERN` und `END_ERINNERT` sind durchlaufen.
@@ -156,6 +156,8 @@ IDs schreibt ihr nicht als Text. Bei jedem Lauf erzeugt bpmn-to-code aus dem Mod
 Nehmt immer die Konstanten mit den IDs aus dem Modell, etwa `TASK_ABLEHNEN.getValue()`, nie die Beschriftung „Ablehnung mitteilen“ und nie die ID als Text. Ändert sich dann eine ID im Modell, meldet schon das Übersetzen jede Stelle im Test.
 
 Fertig seid ihr, wenn der Baum viermal ✔ zeigt und darunter `Tests run: 4, Failures: 0, Errors: 0, Skipped: 0` steht, ohne Timer `Skipped: 1`. Maven setzt `[INFO]` davor, mit übersprungenen Tests `[WARNING]`, beides ist kein Fehler.
+
+Nach jedem Lauf zeigt `target/process-test-coverage/io.miragon.schulung.genehmigung.GenehmigungsworkflowTest/report.html` im Browser das Modell, darin grün, was eure Tests durchlaufen haben, und die Abdeckung: im Startstand 9 von 27, mit Ablehnung und Nachbesserung 16 von 27, mit dem Timer 21 von 27, siehe [Abdeckung im Modell](../prozesstest-java/README.md#abdeckung-im-modell).
 
 Wird ein Test rot, steht unter dem Baum im Block „Results“ je Test eine Zeile mit Klasse, Methode, Zeilennummer und Meldung. Was die häufigen Meldungen bedeuten, steht unter [Meldungen aus dem Prozesstest in Java](#meldungen-aus-dem-prozesstest-in-java).
 
@@ -536,14 +538,15 @@ worker/
     ├── GenehmigungsworkflowTests.cs         # Prozesstest per REST gegen eure lokale Engine
     └── EngineHelfer.cs                      # Test-Helfer für den Prozesstest, fertig vorgegeben
 prozesstest-java/
-├── pom.xml                                  # Engine im Speicher, cibseven-bpm-junit5, cibseven-bpm-assert, bpmn-to-code
+├── pom.xml                                  # Engine im Speicher, cibseven-bpm-junit5, cibseven-bpm-assert, bpmn-to-code, Process Test Coverage
 ├── mvnw, mvnw.cmd                           # Maven Wrapper, lädt Maven beim ersten Lauf
 ├── src/main/resources/
 │   ├── genehmigungsworkflow.bpmn            # Kopie der Entwickler-Fassung, byte-gleich
 │   └── verbuchen-fehlerpfad.bpmn            # Kopie der Variante für den Bonus, byte-gleich
 ├── src/test/java/io/miragon/schulung/genehmigung/
 │   └── GenehmigungsworkflowTest.java        # Prozesstest mit der Engine im Speicher
-└── target/generated-test-sources/bpmn-to-code/   # entsteht beim Lauf: Klassen mit den IDs der Modelle, nicht im Repo
+├── target/generated-test-sources/bpmn-to-code/   # entsteht beim Lauf: Klassen mit den IDs der Modelle, nicht im Repo
+└── target/process-test-coverage/            # entsteht beim Lauf: je Testklasse ein Abdeckungsbericht, report.html
 ```
 
 Die Musterlösung ist genauso aufgebaut: `loesung/worker/` und `loesung/prozesstest-java/`.

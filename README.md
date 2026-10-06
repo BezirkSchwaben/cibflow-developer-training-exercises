@@ -50,7 +50,7 @@ git --version
    dotnet run --project src/GenehmigungWorker
    ```
 
-Den Prozesstest in Java lasst ihr einmal vorab laufen, am besten gleich nach dem Klonen. Der erste Lauf lädt Maven und die Bibliotheken, rund 65 MB, danach geht es auch ohne Netz. Nach jedem `git pull` startet ihr ihn noch einmal mit Netz: Er lädt nach, was im neuen Stand dazugekommen ist. Stack und Worker braucht er nicht. Läuft euer Worker schon, nehmt ein zweites Terminal. Im Repo-Root:
+Den Prozesstest in Java lasst ihr einmal vorab laufen, am besten gleich nach dem Klonen. Der erste Lauf lädt Maven und die Bibliotheken, rund 70 MB, danach geht es auch ohne Netz. Nach jedem `git pull` startet ihr ihn noch einmal mit Netz: Er lädt nach, was im neuen Stand dazugekommen ist. Stack und Worker braucht er nicht. Läuft euer Worker schon, nehmt ein zweites Terminal. Im Repo-Root:
 
 ```bash
 # macOS, Linux, Git Bash

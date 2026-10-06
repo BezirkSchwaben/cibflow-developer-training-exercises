@@ -16,7 +16,7 @@ import org.assertj.core.api.Assertions;
 import org.cibseven.bpm.engine.runtime.Job;
 import org.cibseven.bpm.engine.runtime.ProcessInstance;
 import org.cibseven.bpm.engine.test.Deployment;
-import org.cibseven.bpm.engine.test.junit5.ProcessEngineExtension;
+import org.cibseven.community.process_test_coverage.junit5.platform7.ProcessEngineCoverageExtension;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -35,7 +35,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * Beim Timer kommt seine Fälligkeit dazu.
  * Der Test findet Elemente über die ID aus dem Modell, nie über die Beschriftung.
  */
-@ExtendWith(ProcessEngineExtension.class)
+@ExtendWith(ProcessEngineCoverageExtension.class)
 @Deployment(resources = "genehmigungsworkflow-tag1.bpmn")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Genehmigungsworkflow, Modell ohne External Task")
