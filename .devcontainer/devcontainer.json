@@ -22,7 +22,7 @@
   "remoteEnv": {
     "LC_ALL": "C.UTF-8",
     "DOTNET_ENVIRONMENT": "devcontainer",
-    "no_proxy": "flow-cibseven-spring,flow-webclient,ui-element-template,easy-form,flow-modeler,flow-process-management,flow-resource,rechte,init",
-    "NO_PROXY": "flow-cibseven-spring,flow-webclient,ui-element-template,easy-form,flow-modeler,flow-process-management,flow-resource,rechte,init"
+    "no_proxy": "flow-cibseven-spring,flow-webclient,ui-element-template,easy-form,flow-modeler,flow-process-management,flow-resource,rechte,init,localhost,127.0.0.1,::1,localaddress,.localdomain,*.bv.bezirk-schwaben.de,*.dmz.bv.bezirk-schwaben.de,outlook.bezirk-schwaben.de,autodiscover.bezirk-schwaben.de,10.112.55.*,127.0.0.1,192.168.*.*,totp.bezirk-schwaben.de,OKFINN,OKFINNT01",
+    "NO_PROXY": "flow-cibseven-spring,flow-webclient,ui-element-template,easy-form,flow-modeler,flow-process-management,flow-resource,rechte,init,localhost,127.0.0.1,::1,localaddress,.localdomain,*.bv.bezirk-schwaben.de,*.dmz.bv.bezirk-schwaben.de,outlook.bezirk-schwaben.de,autodiscover.bezirk-schwaben.de,10.112.55.*,127.0.0.1,192.168.*.*,totp.bezirk-schwaben.de,OKFINN,OKFINNT01"
   }
 }

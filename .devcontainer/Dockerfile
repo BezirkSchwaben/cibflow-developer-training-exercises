@@ -21,3 +21,6 @@ RUN curl -o packages-microsoft-prod.deb https://packages.microsoft.com/config/de
 RUN apt-get install -y --no-install-recommends default-jdk
 
 RUN apt-get install -y --no-install-recommends git
+
+RUN mkdir -p /root/.m2
+COPY settings.xml /root/.m2/settings.xml
