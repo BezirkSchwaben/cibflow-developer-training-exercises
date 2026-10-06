@@ -316,6 +316,125 @@ Diesen Pfad hat nur die Variante `prozess/varianten/verbuchen-fehlerpfad.bpmn` a
 
 Warum die Variante? Mit 60.000 Euro aus dem Startformular kommt auch euer Modell bis zu „Genehmigung verbuchen“, aber dort fängt kein Error-Boundary `BUCHUNG_ABGELEHNT`. Dann beendet die Engine die Instanz still am Service Task: Im Cockpit steht sie als abgeschlossen, ohne „Antrag genehmigt“ und ohne `buchungsnummer`. Es gibt keinen Vorfall, und den Grund findet ihr nur im Log der Engine: `docker compose logs flow-cibseven-spring` im Ordner `stack/` zeigt `ENGINE-02001 ... but no catching boundary event was defined. Execution is ended`. Ein `bpmnError` braucht also ein Boundary im Modell, das seinen Code fängt.
 
+## Bonus: Euer Worker als Baustein
+
+Der dritte Bonus, für alle, die dann noch Zeit haben. In Übung 8 habt ihr „Genehmigung verbuchen“ von Hand auf External gestellt und das Topic eingetippt. Ein Element Template macht euren Worker zu einem Baustein: Im Modeler wählt ihn dann auch die Fachseite aus dem Katalog, wie die Bausteine von CIB flow. Das Topic steht fest im Template statt von Hand im Modell, vertippen kann sich niemand mehr. Das Mapping bleibt im Handler: Euer Worker liest `antragsteller`, `betrag` und `begruendung` selbst und schreibt `buchungsnummer` zurück, das Template braucht dafür keine Ein- und Ausgaben.
+
+Macht den Bonus im lokalen Stack, angemeldet als `demo`, an eurem Projekt aus Übung 8. Eine Vorlage gilt dort sofort für alle Konten, und dieselbe ID lässt sich nur einmal hochladen.
+
+**Datei entwerfen**
+
+1. Legt im Repo-Root den Ordner `element-template/` an und darin die Datei `genehmigung-verbuchen.json` mit diesem Gerüst:
+   ```json
+   {
+     "$schema": "https://unpkg.com/@camunda/element-templates-json-schema/resources/schema.json",
+     "name": "TODO",
+     "id": "TODO",
+     "description": "Verbucht einen genehmigten Antrag im Fachsystem. Den Task holt der GenehmigungWorker vom Topic genehmigung-verbuchen.",
+     "appliesTo": ["bpmn:ServiceTask"],
+     "groups": [
+       { "id": "worker", "label": "Worker" }
+     ],
+     "properties": [
+       {
+         "label": "TODO",
+         "type": "Hidden",
+         "value": "TODO",
+         "editable": false,
+         "binding": { "type": "property", "name": "camunda:type" }
+       },
+       {
+         "label": "Topic",
+         "type": "String",
+         "value": "TODO",
+         "editable": false,
+         "group": "worker",
+         "description": "Der Worker liest antragsteller, betrag und begruendung selbst aus dem Prozess und schreibt buchungsnummer zurück.",
+         "binding": { "type": "property", "name": "camunda:topic" }
+       },
+       {
+         "label": "Name",
+         "type": "Hidden",
+         "value": "Genehmigung verbuchen",
+         "binding": { "type": "property", "name": "name" }
+       }
+     ]
+   }
+   ```
+   Die Zeile `$schema` braucht CIB flow nicht. VS Code prüft damit die Datei beim Schreiben und schlägt Felder vor.
+2. Ersetzt jedes `TODO`. Aus diesen Stellen liest der Katalog, wo und wie euer Baustein erscheint:
+
+| Stelle | Was ihr eintragt | Was der Katalog daraus macht |
+|---|---|---|
+| `name` | `<Abschnitt> - <Baustein> (Extern) (<Version>)`, die Klammern wie bei den Bausteinen von CIB flow | Der Teil vor dem ersten Bindestrich wird der Abschnitt, der Teil danach bis zur ersten Klammer der Eintrag. Nehmt im Abschnitt also keinen Bindestrich, etwa `Genehmigungsworkflow`: Aus `mm-genehmigung - …` würde der Abschnitt „mm“. Ohne Bindestrich im `name` landet der Baustein unter „Sonstiges“. |
+| `id` | Buchstaben, Ziffern, Bindestriche und Punkte, am Ende die Version, etwa `-1.0.0` | Das Stück nach dem letzten Bindestrich steht als Version im Katalog, etwa „Version 1.0.0“. |
+| `label` und `value` des ersten Property | `"label": "Implementation Type"` und `"value": "external"` | Nur mit genau diesem Label steht der Baustein als „Extern“ im Katalog. Heißt das Label anders, steht er als „Intern“ da, obwohl er einen External Task setzt. |
+| `value` des Property „Topic“ | euer Topic, zeichengleich mit `Topic` in `appsettings.json` | Nach dem Anwenden steht es grau und nicht änderbar in der Gruppe „Worker“. |
+
+**Hochladen**
+
+3. Öffnet über das Logo „CIB flow“ die Kachel „Prozess modellieren“.
+4. Klickt unten links auf „Manage templates“ (Zahnrad). Die Seite „Vorlagenverwaltung“ listet die Vorlagen von CIB flow, rund 500.
+5. Klickt auf „+ Vorlage hinzufügen“. Im Dialog „Element-Vorlage erstellen“ ist unter „Import Mode“ „Single Template“ gewählt.
+6. Klickt auf „Datei auswählen“ und wählt eure Datei `element-template/genehmigung-verbuchen.json`.
+7. Klickt auf den grünen Haken „Diese Datei verwenden“. Meldung: „Datei erfolgreich verarbeitet! Überprüfen Sie die extrahierten Daten unten.“ „Vorlagen-ID“, „Name“, „Beschreibung“ und „Inhalt (JSON)“ sind ausgefüllt, „Aktiv“ ist an. Ändert hier nichts.
+8. Klickt auf „Speichern“. Die Meldung „Vorlage '…' erfolgreich erstellt!“ nennt euren `name`, der Dialog schließt sich.
+
+**Im Modell anwenden**
+
+9. Öffnet erst jetzt euer Diagramm: Logo „CIB flow“, Kachel „Prozessmanagement“, euer Projekt, Maus über die Zeile des Diagramms, Stift „Artefakt bearbeiten“.
+10. Klickt „Genehmigung verbuchen“ an. Der Panel-Kopf zeigt „SERVICE TASK“.
+11. Klickt in der Gruppe „Vorlage“ rechts auf „+ Auswählen“. Der Katalog öffnet sich.
+12. Tippt `verbuchen` ins Suchfeld „Nach Templates suchen“. Unter eurem Abschnitt steht euer Baustein, darunter grau „Extern“ und eure Version, etwa „Extern • Version 1.0.0“. Klickt ihn an.
+13. Prüft das Panel: Der Kopf zeigt euren `name` in Großbuchstaben, bei schmalem Panel gekürzt, darunter „Genehmigung verbuchen“. Die Gruppe „Vorlage“ zeigt „Applied“, die Gruppe „Worker“ das Topic grau und nicht änderbar, darunter den Erklärtext. Die Gruppe „Implementation“ gibt es nicht mehr. Name und ID `Task_Verbuchen` unter „Allgemein“ bleiben.
+
+**Herunterladen und deployen**
+
+14. Klickt auf eine freie Stelle der Zeichenfläche, dann in der Leiste unten auf „BPMN-Diagramm herunterladen“ (Pfeil nach unten), wie in Übung 8. Ladet vor dem Speichern herunter.
+15. Speichert mit der Diskette „Diagramm speichern“ und wartet auf die Meldung „Der Prozess wurde erfolgreich aktualisiert.“
+16. Legt den Download als `prozess/genehmigungsworkflow.bpmn` ab, wie in Übung 8. Im Ordner `worker/`, mit dem Namen eurer Datei statt `Collaboration_078xn5b`:
+    ```bash
+    # bash, zsh, Git Bash
+    mv ~/Downloads/Collaboration_078xn5b.bpmn ../prozess/genehmigungsworkflow.bpmn
+    ```
+    ```powershell
+    # PowerShell
+    Move-Item -Force $HOME\Downloads\Collaboration_078xn5b.bpmn ..\prozess\genehmigungsworkflow.bpmn
+    ```
+17. Prüft, dass das Template im Modell steht:
+    ```bash
+    # bash, zsh, Git Bash
+    grep 'id="Task_Verbuchen"' ../prozess/genehmigungsworkflow.bpmn
+    ```
+    ```powershell
+    # PowerShell
+    Select-String -Path ..\prozess\genehmigungsworkflow.bpmn -Pattern 'id="Task_Verbuchen"'
+    ```
+    Neu ist nur `camunda:modelerTemplate` mit eurer `id`. Typ und Topic stehen da wie seit Übung 8. Mit der Musterlösung sieht die Zeile so aus:
+    ```
+        <bpmn:serviceTask id="Task_Verbuchen" name="Genehmigung verbuchen" camunda:modelerTemplate="genehmigung-verbuchen-1.0.0" camunda:type="external" camunda:topic="genehmigung-verbuchen">
+    ```
+18. Spielt das Modell ein:
+    ```bash
+    dotnet run --project src/GenehmigungWorker -- deploy
+    ```
+    `deploy` meldet `Neue Version:` mit eurer Process ID und der nächsten Versionsnummer. Für die Engine ändert sich nichts, sie führt denselben External Task aus wie vorher. `camunda:modelerTemplate` braucht nur der Modeler.
+19. Startet euren Worker, stellt als `anna` einen Antrag und schließt als `gerda` „Antrag prüfen“ mit „Genehmigt“ ab, wie in [Schritt 6](#6-end-to-end-über-das-formular). Euer Worker holt den Task wie vorher, am Code ändert ihr nichts. Das Log zeigt den geholten Task, eure Buchung und das `complete`, in der Musterlösung zuletzt `Task ... erledigt: buchungsnummer = B-2026-...`.
+
+Den Weg der Fachseite probiert ihr an einem neuen Service Task in einem anderen Diagramm: „Vorlage“, „+ Auswählen“, und ohne Suche steht euer Baustein im Abschnitt aus eurem `name`. Nach dem Klick heißt der Task „Genehmigung verbuchen“ und trägt Typ und Topic eures Workers.
+
+**Hinweise**
+
+- **Kein Feld `version`.** Mit `"version": 1` schreibt der Modeler zusätzlich `camunda:modelerTemplateVersion="1"` ins Modell. Ändert ihr die Zahl später in derselben Vorlage, zeigt jedes Modell mit der alten Zahl in der Gruppe „Vorlage“ „Not found“. Eine neue Fassung bekommt deshalb eine neue `id` und einen neuen `name`, etwa mit `1.1.0`. Dann stehen beide im Katalog, und vorhandene Modelle bleiben bei der alten.
+- **Kein `entriesVisible`.** Mit `"entriesVisible": true` zeigt das Panel wieder alle Gruppen, auch „Implementation“. Dort lässt sich das Topic trotz `"editable": false` ändern, und die Vorlage bleibt dabei „Applied“.
+- **Dieselbe `id` nur einmal hochladen.** Beim zweiten Mal meldet der Dialog rot „Constraint violated: …“ und bleibt offen, angelegt wird nichts. Eine geänderte Fassung derselben `id` speichert ihr in der Vorlagenverwaltung über den Stift „Bearbeiten“ an eurer Zeile, der Dialog dort heißt „Edit Element Template“.
+- **Löschen geht in der Oberfläche nicht.** Die Vorlagenverwaltung hat dafür keinen Knopf. Das Auge an der Zeile blendet die Vorlage nur aus: Danach findet der Katalog sie nicht mehr, und Modelle mit dieser Vorlage zeigen in der Gruppe „Vorlage“ „Not found“. Ein deploytes Modell läuft weiter, Typ und Topic stehen ja im XML.
+- **Am User Task gibt es euren Baustein nicht.** Der Katalog zeigt nur Vorlagen, deren `appliesTo` zum Element passt, an einem User Task findet die Suche `verbuchen` also „Keine Vorlagen“. Zeigt der Panel-Kopf in Schritt 10 „USER TASK“, macht ihr ihn zuerst über den Schraubenschlüssel „Element ändern“ zum „Service Task“.
+- **Ungültiges JSON.** Nach dem grünen Haken steht rot „Ungültige JSON-Datei. Bitte überprüfen Sie das Dateiformat und versuchen Sie es erneut.“, und „Speichern“ bleibt grau. VS Code zeigt euch die Stelle in der Datei.
+- **HTML statt BPMN.** Ist die Datei unter `prozess/` nur rund 500 Byte groß und `deploy` meldet `ENGINE-09003 Could not parse 'genehmigungsworkflow.bpmn'`, habt ihr direkt nach dem Speichern eine HTML-Datei heruntergeladen. Verschiebt im Modeler ein Element ein Stück und ladet noch einmal herunter.
+
+Die Musterlösung liegt unter `loesung/element-template/genehmigung-verbuchen.json`. Euer Template vergleicht ihr im Repo-Root, bash und PowerShell gleich, mit `git diff --no-index element-template loesung/element-template`.
+
 ## Musterlösung
 
 `loesung/` enthält die Musterlösung als zwei vollständige Projekte, aufgebaut wie der Startstand: `loesung/worker/` mit Solution, `src/` und `tests/`, und `loesung/prozesstest-java/` mit Maven Wrapper, `pom.xml`, den Kopien der Modelle und allen Tests. Ihr baut und testet sie direkt in diesen Ordnern, ohne etwas zu kopieren. Die README des Java-Projekts liegt nur im Startstand. Sonst weichen vom Startstand nur diese Dateien ab, alle anderen sind gleich:
@@ -336,6 +455,9 @@ Warum die Variante? Mit 60.000 Euro aus dem Startformular kommt auch euer Modell
 | `loesung/prozesstest-java/src/test/java/io/miragon/schulung/genehmigung/FehlerpfadTest.java` | neu, Bonus: Prozesstest gegen die Variante, `bpmnError` mit `BUCHUNG_ABGELEHNT` führt zu „Buchung klären“, Gegenprobe mit `complete` endet bei „Antrag genehmigt“ |
 | `loesung/prozesstest-java/src/test/java/io/miragon/schulung/genehmigung/GenehmigungsworkflowTag1Test.java` und `loesung/prozesstest-java/src/main/resources/genehmigungsworkflow-tag1.bpmn` | neu, nur für die Demo in Kapitel 10: dieselben vier Testfälle am fertigen Modell nach Übung 7, ohne External Task |
 | `loesung/genehmigungsworkflow-entwickler.bpmn` | Lösung von Übung 8: das Modell mit „Genehmigung verbuchen“ als External Task, Quelle der Modellkopien in beiden Java-Projekten |
+| `loesung/element-template/genehmigung-verbuchen.json` | neu, Bonus Baustein: das Element Template für „Genehmigung verbuchen“, Abschnitt „Genehmigungsworkflow“ im Katalog, „Extern“, Version 1.0.0, `camunda:type` und Topic `genehmigung-verbuchen` fest. Die GitHub Action prüft, dass das Topic zum Modell passt |
+
+Unter `loesung/worker-hexagonal/` liegt derselbe Worker nach Ports und Adaptern geschnitten, siehe [Schichten oder hexagonal](#schichten-oder-hexagonal).
 
 **Vergleichen:** In VS Code beide Dateien im Explorer markieren, Rechtsklick, „Ausgewählte vergleichen“. Oder im Terminal im Repo-Root, bash und PowerShell gleich:
 
@@ -425,6 +547,10 @@ prozesstest-java/
 ```
 
 Die Musterlösung ist genauso aufgebaut: `loesung/worker/` und `loesung/prozesstest-java/`.
+
+### Schichten oder hexagonal
+
+Euer Worker unter `worker/` ist in Schichten geschnitten: Die Schleife in `Program.cs` holt den Task, der Handler liest die Variablen und ruft das Fachsystem hinter `IBuchungssystem`. `loesung/worker-hexagonal/` macht genau dasselbe nach Ports und Adaptern: Die Fachlogik steht in einem eigenen Projekt, `GenehmigungWorker.Domaene`, das die Engine nicht kennt, und Architekturtests prüfen das bei jedem Testlauf. Was anders ist, warum und wo dieser Schnitt an Grenzen stößt, steht in [loesung/worker-hexagonal/README.md](../loesung/worker-hexagonal/README.md). Umbauen müsst ihr nichts, die Fassung ist zum Lesen und Vergleichen da.
 
 ### Tests
 

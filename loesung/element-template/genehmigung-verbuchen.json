@@ -1,0 +1,34 @@
+{
+  "$schema": "https://unpkg.com/@camunda/element-templates-json-schema/resources/schema.json",
+  "name": "Genehmigungsworkflow - Genehmigung verbuchen (Extern) (1.0.0)",
+  "id": "genehmigung-verbuchen-1.0.0",
+  "description": "Verbucht einen genehmigten Antrag im Fachsystem. Den Task holt der GenehmigungWorker vom Topic genehmigung-verbuchen.",
+  "appliesTo": ["bpmn:ServiceTask"],
+  "groups": [
+    { "id": "worker", "label": "Worker" }
+  ],
+  "properties": [
+    {
+      "label": "Implementation Type",
+      "type": "Hidden",
+      "value": "external",
+      "editable": false,
+      "binding": { "type": "property", "name": "camunda:type" }
+    },
+    {
+      "label": "Topic",
+      "type": "String",
+      "value": "genehmigung-verbuchen",
+      "editable": false,
+      "group": "worker",
+      "description": "Der Worker liest antragsteller, betrag und begruendung selbst aus dem Prozess und schreibt buchungsnummer zurück.",
+      "binding": { "type": "property", "name": "camunda:topic" }
+    },
+    {
+      "label": "Name",
+      "type": "Hidden",
+      "value": "Genehmigung verbuchen",
+      "binding": { "type": "property", "name": "name" }
+    }
+  ]
+}

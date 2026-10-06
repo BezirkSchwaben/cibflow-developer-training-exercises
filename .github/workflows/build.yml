@@ -3,12 +3,15 @@
 #   startstand          Der Startstand unter worker/ (Ende von Übung 8) baut, und seine Tests laufen durch.
 #                       Die Tests mit TODO sind übersprungen, nicht rot. Dazu: Das Projekt-ZIP passt zum Modell,
 #                       und die Musterlösung unter loesung/ ist vollständig und weicht nur in den Übungsdateien
-#                       vom Startstand ab (.github/scripts/loesung-abgleich.sh).
-#   musterloesung       Die Musterlösung unter loesung/worker/, ein vollständiges Projekt:
-#                       Build, Unit-Tests ohne Engine, Engine per Docker Compose,
+#                       vom Startstand ab, die hexagonale Fassung lässt ihre Kopien aus loesung/worker/ unverändert
+#                       (.github/scripts/loesung-abgleich.sh). Das Element Template unter loesung/element-template/
+#                       ist gültiges JSON und setzt an Task_Verbuchen Typ und Topic der Entwickler-Fassung.
+#   musterloesung       Die Musterlösung unter loesung/worker/, ein vollständiges Projekt, und ihre hexagonale
+#                       Fassung unter loesung/worker-hexagonal/ (Domäne, Ports, Adapter, Architekturtests):
+#                       Build und Unit-Tests ohne Engine für beide, Engine per Docker Compose,
 #                       Deployment mit "dotnet run -- deploy": erst der Startstand (fertiges Modell nach Übung 7, nur User Tasks),
 #                       dann wie in Übung 8 die Entwickler-Fassung mit External Task. Danach Smoke-Test und
-#                       die Prozesstests gegen die Engine.
+#                       die Prozesstests gegen die Engine, erst die der Schichten-Fassung, dann die der hexagonalen.
 #   java-startstand     Der Prozesstest in Java unter prozesstest-java/: Die Modellkopien sind byte-gleich zur
 #                       Entwickler-Fassung und zur Variante, der Happy Path läuft grün, die drei TODO-Tests sind
 #                       übersprungen, nicht rot. Dazu: Die Modellkopie der Demo in Kapitel 10 ist der Startstand.
@@ -86,6 +89,60 @@ jobs:
             exit 1
           fi
 
+      - name: Element Template passt zum Modell
+        run: |
+          # Bonus "Euer Worker als Baustein" in Übung 9: Die Vorlage muss gültiges JSON sein und an Task_Verbuchen
+          # der Entwickler-Fassung genau das setzen, was dort steht: Elementtyp, camunda:type und Topic.
+          # Weicht das Topic ab, holt der Worker nach dem Anwenden der Vorlage keinen Task mehr.
+          python3 - <<'PY'
+          import json
+          import xml.etree.ElementTree as ET
+
+          VORLAGE = "loesung/element-template/genehmigung-verbuchen.json"
+          MODELL = "loesung/genehmigungsworkflow-entwickler.bpmn"
+          CAMUNDA = "{http://camunda.org/schema/1.0/bpmn}"
+
+          try:
+              with open(VORLAGE, encoding="utf-8") as datei:
+                  vorlage = json.load(datei)
+          except json.JSONDecodeError as fehler:
+              print(f"::error file={VORLAGE},line={fehler.lineno},col={fehler.colno}::{VORLAGE} ist kein gültiges JSON: {fehler.msg}")
+              raise SystemExit(1)
+
+          def gebunden(attribut):
+              # Werte aller Properties der Vorlage, die per "property" an dieses Attribut des Elements binden
+              return [p.get("value") for p in vorlage.get("properties", [])
+                      if p.get("binding", {}).get("type") == "property" and p.get("binding", {}).get("name") == attribut]
+
+          task = next((e for e in ET.parse(MODELL).iter() if e.get("id") == "Task_Verbuchen"), None)
+          if task is None:
+              print(f"::error::{MODELL} hat kein Element Task_Verbuchen")
+              raise SystemExit(1)
+
+          art = task.tag.split("}")[-1]
+          erwartet = {
+              "appliesTo": "bpmn:" + art[0].upper() + art[1:],
+              "camunda:type": task.get(CAMUNDA + "type"),
+              "camunda:topic": task.get(CAMUNDA + "topic"),
+          }
+          gefunden = {
+              "appliesTo": vorlage.get("appliesTo", []),
+              "camunda:type": gebunden("camunda:type"),
+              "camunda:topic": gebunden("camunda:topic"),
+          }
+
+          fehler = 0
+          for schluessel, wert in erwartet.items():
+              if gefunden[schluessel] != [wert]:
+                  print(f"::error file={VORLAGE}::{schluessel} in der Vorlage ist {gefunden[schluessel]}, "
+                        f"an Task_Verbuchen in {MODELL} steht {wert!r}. Gleicht die Vorlage an das Modell an.")
+                  fehler = 1
+          if fehler:
+              raise SystemExit(1)
+          print(f"Element Template passt zum Modell: {erwartet['appliesTo']}, "
+                f"camunda:type {erwartet['camunda:type']}, Topic {erwartet['camunda:topic']}")
+          PY
+
   musterloesung:
     name: Musterlösung gegen die lokale Engine
     runs-on: ubuntu-latest
@@ -106,6 +163,12 @@ jobs:
 
       - name: Unit-Tests ohne Engine und ohne Zugangsdaten
         run: dotnet test loesung/worker/GenehmigungWorker.sln --no-build --filter "Kategorie!=Prozesstest" --logger "console;verbosity=normal"
+
+      - name: Hexagonale Fassung bauen
+        run: dotnet build loesung/worker-hexagonal/GenehmigungWorker.sln
+
+      - name: Hexagonale Fassung, Unit-Tests und Architekturtests ohne Engine
+        run: dotnet test loesung/worker-hexagonal/GenehmigungWorker.sln --no-build --filter "Kategorie!=Prozesstest" --logger "console;verbosity=normal"
 
       - name: Engine starten (CIB seven, siehe oben)
         working-directory: .github/ci-stack
@@ -163,6 +226,14 @@ jobs:
           EngineBenutzer: worker
           EnginePasswort: worker
         run: dotnet test loesung/worker/GenehmigungWorker.sln --no-build --filter "Kategorie=Prozesstest" --logger "console;verbosity=normal"
+
+      - name: Hexagonale Fassung, Prozesstests gegen dieselbe Engine
+        env:
+          EngineBenutzer: worker
+          EnginePasswort: worker
+        # Dieselben Fälle über Adapter und Use Case statt Handler. Die Variante für den Fehlerpfad
+        # hat der Lauf davor schon deployt, deploy meldet dann "Modell unverändert".
+        run: dotnet test loesung/worker-hexagonal/GenehmigungWorker.sln --no-build --filter "Kategorie=Prozesstest" --logger "console;verbosity=normal"
 
       - name: Zustand der Engine bei Fehler
         if: failure()

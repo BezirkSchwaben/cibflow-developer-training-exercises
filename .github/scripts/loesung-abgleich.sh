@@ -7,6 +7,10 @@
 #
 # Ändert ihr eine Datei im Startstand, die nicht zur Übung gehört (etwa EngineHelfer.cs oder pom.xml),
 # kopiert sie nach loesung/. Kommt eine Übungsdatei dazu, tragt sie unten ein.
+#
+# Dazu: loesung/worker-hexagonal/ ist derselbe Worker nach Ports und Adaptern geschnitten, mit eigenem Aufbau.
+# Einige Dateien übernimmt sie unverändert aus loesung/worker/, ExternalTaskClient.cs mit anderem Namespace.
+# Ändert ihr eine davon in loesung/worker/, kopiert sie mit (Liste HEXAGONAL_GLEICH unten).
 # Aufruf im Repo-Root oder irgendwo darunter: .github/scripts/loesung-abgleich.sh
 set -euo pipefail
 cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
@@ -71,7 +75,30 @@ for datei in $NUR_LOESUNG; do
   fi
 done
 
+# Die hexagonale Fassung übernimmt diese Dateien aus loesung/worker/: links dort, rechts in loesung/worker-hexagonal/.
+HEXAGONAL_GLEICH="
+src/GenehmigungWorker/Einstellungen.cs:src/GenehmigungWorker/Einstellungen.cs
+src/GenehmigungWorker/Deploy.cs:src/GenehmigungWorker/Deploy.cs
+src/GenehmigungWorker/appsettings.json:src/GenehmigungWorker/appsettings.json
+tests/GenehmigungWorker.Tests/EngineHelfer.cs:tests/GenehmigungWorker.Tests/EngineHelfer.cs
+tests/GenehmigungWorker.Tests/ExternalTaskClientTests.cs:tests/GenehmigungWorker.Tests/ExternalTaskClientTests.cs
+"
+for paar in $HEXAGONAL_GLEICH; do
+  vorlage="loesung/worker/${paar%%:*}"
+  kopie="loesung/worker-hexagonal/${paar#*:}"
+  if ! cmp -s "$vorlage" "$kopie"; then
+    melde "$kopie weicht von $vorlage ab. Angleichen: cp $vorlage $kopie"
+  fi
+done
+
+# ExternalTaskClient.cs liegt in der hexagonalen Fassung im Engine-Adapter, nur die namespace-Zeile ist anders
+vorlage=loesung/worker/src/GenehmigungWorker/ExternalTaskClient.cs
+kopie=loesung/worker-hexagonal/src/GenehmigungWorker/Adapter/Engine/ExternalTaskClient.cs
+if ! sed 's/^namespace GenehmigungWorker;$/namespace GenehmigungWorker.Adapter.Engine;/' "$vorlage" | cmp -s - "$kopie"; then
+  melde "$kopie weicht von $vorlage ab, nicht nur im Namespace. Angleichen: sed 's/^namespace GenehmigungWorker;\$/namespace GenehmigungWorker.Adapter.Engine;/' $vorlage > $kopie"
+fi
+
 if [ "$fehler" -eq 0 ]; then
-  echo "Musterlösung vollständig, Abweichungen nur in den Übungsdateien."
+  echo "Musterlösung vollständig, Abweichungen nur in den Übungsdateien. Die hexagonale Fassung teilt ihre Kopien unverändert."
 fi
 exit "$fehler"

@@ -81,7 +81,7 @@ Die Schritte von Übung 8 stehen in der Übungsanleitung eurer Schulung. Das Bla
 
 ## Was wo liegt
 
-Ihr arbeitet in zwei Ordnern: `worker/` für C# und `prozesstest-java/` für Java. Die fertige Fassung beider Projekte liegt unter `loesung/`. Wie ihr sie baut und mit eurem Stand vergleicht, steht in [loesung/README.md](loesung/README.md).
+Ihr arbeitet in zwei Ordnern: `worker/` für C# und `prozesstest-java/` für Java. Die fertige Fassung beider Projekte liegt unter `loesung/`, dazu der Worker noch einmal nach Ports und Adaptern geschnitten. Wie ihr sie baut und mit eurem Stand vergleicht, steht in [loesung/README.md](loesung/README.md).
 
 ```
 cibflow-developer-training-exercises/
@@ -110,6 +110,8 @@ cibflow-developer-training-exercises/
 ├── loesung/                            # Musterlösung zu Übung 8 und 9, Anleitung in loesung/README.md
 │   ├── genehmigungsworkflow-entwickler.bpmn  # Lösung von Übung 8: „Genehmigung verbuchen“ als External Task, Rückfall
 │   ├── worker/                         # der fertige Worker mit allen Tests, gleicher Aufbau wie worker/
+│   ├── worker-hexagonal/               # derselbe Worker nach Ports und Adaptern geschnitten, zum Vergleich, Anleitung in seiner README.md
+│   ├── element-template/               # Bonus in Übung 9: euer Worker als Baustein im Katalog des Modelers
 │   └── prozesstest-java/               # die fertigen Prozesstests in Java, hier läuft die Demo zu Kapitel 10
 └── .github/                            # CI: baut und testet Startstand und Musterlösung, in C# und Java
 ```
@@ -122,7 +124,7 @@ Ob das Repo auf einem Rechner läuft, prüft ihr in fünf Schritten mit dem [Set
 
 Die Demo in Kapitel 10 läuft in `loesung/prozesstest-java/` mit der Klasse `GenehmigungsworkflowTag1Test` am Modell ohne External Task, dort liegt der fertige Test schon. Das Modell ändert ihr vorübergehend nur in `loesung/prozesstest-java/src/main/resources/genehmigungsworkflow-tag1.bpmn`, zurück geht es im Repo-Root mit `git restore loesung/prozesstest-java`. Der Startstand `prozesstest-java/` bleibt für die Übung unberührt. Vorbereitung, Ablauf und die erwarteten Meldungen stehen in [prozesstest-java/README.md](prozesstest-java/README.md#demo-kapitel-10-trainer).
 
-Die GitHub Action `.github/workflows/build.yml` baut und testet bei jedem Push Startstand und Musterlösung, jeweils in C# und in Java. Warum sie für die Musterlösung eine eigene Engine aus `.github/ci-stack/` startet, steht im Kommentar der Datei. Dazu prüft `.github/scripts/loesung-abgleich.sh`, auch in der CI, dass die Musterlösung jede Datei des Startstands enthält und nur in den Übungsdateien abweicht. Die Liste der Übungsdateien steht im Skript.
+Die GitHub Action `.github/workflows/build.yml` baut und testet bei jedem Push Startstand und Musterlösung, jeweils in C# und in Java, in C# auch die hexagonale Fassung unter `loesung/worker-hexagonal/`. Warum sie für die Musterlösung eine eigene Engine aus `.github/ci-stack/` startet, steht im Kommentar der Datei. Dazu prüft `.github/scripts/loesung-abgleich.sh`, auch in der CI, dass die Musterlösung jede Datei des Startstands enthält und nur in den Übungsdateien abweicht, und dass die hexagonale Fassung die Dateien, die sie aus `loesung/worker/` übernimmt, unverändert lässt. Die Listen stehen im Skript.
 
 ## Lizenz
 
