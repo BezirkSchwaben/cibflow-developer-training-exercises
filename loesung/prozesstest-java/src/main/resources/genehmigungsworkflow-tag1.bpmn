@@ -13,8 +13,9 @@
   Process_Genehmigung ist die ID der Vorlage. In Übung 8 ersetzt ihr diese Datei in eurem Klon durch euer
   eigenes Modell mit eurem Key.
 
-  Diese Datei wird erzeugt, nicht von Hand ändern. Byte-gleiche Kopie:
+  Diese Datei wird erzeugt, nicht von Hand ändern. Byte-gleiche Kopien:
   loesung/prozesstest-java/src/main/resources/genehmigungsworkflow-tag1.bpmn
+  loesung/prozesstest-jgiven/src/main/resources/genehmigungsworkflow-tag1.bpmn
 -->
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"

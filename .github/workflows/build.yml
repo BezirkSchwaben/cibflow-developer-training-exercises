@@ -17,7 +17,12 @@
 #                       übersprungen, nicht rot. Dazu: Die Modellkopie der Demo in Kapitel 10 ist der Startstand.
 #   java-musterloesung  Die Musterlösung unter loesung/prozesstest-java/, ein vollständiges Projekt:
 #                       alle Tests grün, keiner übersprungen, die Demo-Tests am Modell ohne External Task und
-#                       der Bonus Fehlerpfad eingeschlossen.
+#                       der Bonus Fehlerpfad eingeschlossen. Die Abdeckungsberichte je Testklasse
+#                       (target/process-test-coverage) lädt der Job als Artefakt abdeckung-musterloesung hoch.
+#   java-jgiven         Der Ausblick in Kapitel 10 unter loesung/prozesstest-jgiven/, ein eigenes Projekt: Die Modellkopie
+#                       ist der Startstand unter prozess/, die zwei Szenarien mit JGiven laufen grün, keins übersprungen,
+#                       das JSON für den Bericht von JGiven und der Abdeckungsbericht liegen da. Den HTML-Bericht von
+#                       JGiven (./mvnw jgiven:report) baut der Job nicht.
 #                       Die Java-Jobs brauchen weder Docker noch Zugangsdaten, die Engine läuft im Speicher.
 #
 # Warum die CI gegen reines CIB seven läuft und nicht gegen den CIB flow Stack aus stack/:
@@ -351,5 +356,71 @@ jobs:
           fi
           if [ ! -f target/surefire-reports/TEST-io.miragon.schulung.genehmigung.GenehmigungsworkflowTag1Test.xml ]; then
             echo "::error::Die Demo-Tests am Modell ohne External Task (GenehmigungsworkflowTag1Test) sind nicht gelaufen"
+            exit 1
+          fi
+
+      # Je Testklasse ein HTML-Bericht: das Modell, darin grün, was die Tests durchlaufen haben. Zum Ansehen
+      # entpacken und report.html im Browser öffnen. Fehlen die Berichte trotz grüner Tests, wird der Job rot.
+      - name: Abdeckungsberichte hochladen
+        uses: actions/upload-artifact@v7
+        with:
+          name: abdeckung-musterloesung
+          path: loesung/prozesstest-java/target/process-test-coverage/
+          if-no-files-found: error
+
+  java-jgiven:
+    name: JGiven-Demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: loesung/prozesstest-jgiven
+    steps:
+      - name: Repo auschecken
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Modellkopie ist der Startstand
+        run: |
+          # Die Szenarien testen dasselbe Modell wie die Demo in loesung/prozesstest-java: das fertige Modell nach Übung 7
+          kopie=src/main/resources/genehmigungsworkflow-tag1.bpmn
+          if ! cmp -s "$kopie" ../../prozess/genehmigungsworkflow.bpmn; then
+            echo "::error::loesung/prozesstest-jgiven/$kopie weicht von prozess/genehmigungsworkflow.bpmn ab. Nach einer Änderung am Startstand: cp prozess/genehmigungsworkflow.bpmn loesung/prozesstest-jgiven/$kopie, nach einem Ausprobieren: git restore loesung/prozesstest-jgiven"
+            exit 1
+          fi
+
+      - name: JDK 21 einrichten
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: loesung/prozesstest-jgiven/pom.xml
+
+      - name: Szenarien ausführen (Engine im Speicher)
+        run: ./mvnw -B -ntp test
+
+      - name: Zwei Szenarien grün, keins übersprungen, JGiven-Bericht als JSON und Abdeckungsbericht da
+        run: |
+          # Überspringen ist für Maven kein Fehler, hier schon. Fehlt das JSON, hätte ./mvnw jgiven:report nichts zu zeigen.
+          # Den Abdeckungsbericht schreibt die ProcessEngineCoverageExtension, mit der die Testklasse die Engine einbindet.
+          bericht=target/surefire-reports/TEST-io.miragon.schulung.genehmigung.GenehmigungsworkflowSzenarioTest.xml
+          kopf=$(grep -o '<testsuite [^>]*>' "$bericht")
+          echo "$kopf"
+          for erwartet in 'tests="2"' 'skipped="0"' 'failures="0"' 'errors="0"'; do
+            case "$kopf" in
+              *"$erwartet"*) ;;
+              *) echo "::error::Erwartet: 2 Szenarien grün, keins übersprungen. Abweichung bei $erwartet"; exit 1 ;;
+            esac
+          done
+          json=target/jgiven-reports/json/io.miragon.schulung.genehmigung.GenehmigungsworkflowSzenarioTest.json
+          if [ ! -s "$json" ]; then
+            echo "::error::JGiven hat $json nicht geschrieben"
+            exit 1
+          fi
+          abdeckung=target/process-test-coverage/io.miragon.schulung.genehmigung.GenehmigungsworkflowSzenarioTest/report.html
+          if [ ! -s "$abdeckung" ]; then
+            echo "::error::Der Abdeckungsbericht $abdeckung fehlt"
             exit 1
           fi
