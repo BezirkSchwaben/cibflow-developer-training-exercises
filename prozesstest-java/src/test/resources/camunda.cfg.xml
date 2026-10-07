@@ -2,13 +2,16 @@
 <!--
   Die Engine für den Test: H2 im Speicher, ohne Job Executor.
   Speicherpunkte (asyncAfter) und Timer stoßen die Tests deshalb selbst an.
-  Den Dateinamen camunda.cfg.xml sucht die ProcessEngineExtension von sich aus.
+  Den Dateinamen camunda.cfg.xml sucht die ProcessEngineCoverageExtension von sich aus, wie die ProcessEngineExtension.
+  Die Klasse kommt aus CIB seven Process Test Coverage und erweitert die Engine im Speicher von CIB seven
+  (StandaloneInMemProcessEngineConfiguration): Beim Deployment hängt sie an jedes Element und jeden Pfeil
+  einen Listener, der mitschreibt, was der Test durchläuft. Daraus entsteht der Bericht unter target/process-test-coverage.
 -->
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-  <bean id="processEngineConfiguration" class="org.cibseven.bpm.engine.impl.cfg.StandaloneInMemProcessEngineConfiguration">
+  <bean id="processEngineConfiguration" class="org.cibseven.community.process_test_coverage.engine.platform7.ProcessCoverageInMemProcessEngineConfiguration">
     <property name="jdbcUrl" value="jdbc:h2:mem:prozesstest;DB_CLOSE_DELAY=1000" />
     <property name="jobExecutorActivate" value="false" />
     <!-- hasPassed und hasNotPassed lesen die Historie -->

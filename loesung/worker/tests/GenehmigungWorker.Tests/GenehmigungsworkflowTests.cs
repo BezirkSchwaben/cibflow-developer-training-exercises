@@ -2,7 +2,7 @@ namespace GenehmigungWorker.Tests;
 
 /// <summary>
 /// Prozesstests per REST gegen eure lokale Engine: Modell, Engine und Handler im Zusammenspiel.
-/// Voraussetzung: Stack läuft, Modell ist bereitgestellt (Projekt-ZIP importiert oder dotnet run -- deploy),
+/// Voraussetzung: Stack läuft, Modell mit dem Umbau aus Übung 8 ist bereitgestellt (dotnet run -- deploy),
 /// euer Worker ist gestoppt.
 /// Nur die Unit-Tests ohne Engine: dotnet test --filter "Kategorie!=Prozesstest"
 /// </summary>
@@ -38,7 +38,14 @@ public class GenehmigungsworkflowTests : IDisposable
         Assert.Equal("Task_Pruefen", aufgabe.TaskDefinitionKey);
         await _engine.CompleteTaskAsync(aufgabe.Id, new() { ["entscheidung"] = "abgelehnt" });
 
+        // "Ablehnung mitteilen" wartet als Aufgabe, einen External Task gibt es auf diesem Weg nie
+        var mitteilen = await _engine.GetTaskAsync(instanz.Id);
+        Assert.Equal("Task_Ablehnen", mitteilen.TaskDefinitionKey);
         Assert.Empty(await _engine.GetExternalTasksAsync(instanz.Id));
+        Assert.Equal("ACTIVE", (await _engine.GetHistoryAsync(instanz.Id)).State);
+
+        // Erst wenn auch diese Aufgabe abgeschlossen ist, endet die Instanz
+        await _engine.CompleteTaskAsync(mitteilen.Id, new());
         Assert.Equal("COMPLETED", (await _engine.GetHistoryAsync(instanz.Id)).State);
         Assert.Null(await _engine.GetVariableAsync(instanz.Id, "buchungsnummer"));
     }

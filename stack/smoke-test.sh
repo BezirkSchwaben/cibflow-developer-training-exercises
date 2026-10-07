@@ -2,16 +2,19 @@
 # Trainer-Werkzeug: prüft den laufenden Stack mit allen drei Pfaden des Genehmigungsworkflows.
 #
 #   a) genehmigt:   External Task holen (fetchAndLock als worker), complete mit buchungsnummer
-#   b) abgelehnt:   Instanz endet bei "Antrag abgelehnt", ablehnungMitgeteilt ist gesetzt
+#   b) abgelehnt:   "Ablehnung mitteilen" wartet als Aufgabe bei der Gruppe genehmiger, kein External Task,
+#                   nach dem Abschließen endet die Instanz bei "Antrag abgelehnt"
 #   c) nachbessern: "Antrag nachbessern" liegt bei anna
 #
 # Aufruf im Ordner stack/, nachdem "docker compose up -d" durch ist:
 #   ./smoke-test.sh          (Windows: in Git Bash "bash smoke-test.sh")
 #
-# Braucht nur bash und curl. Deployt prozess/genehmigungsworkflow.bpmn (unverändert
-# erzeugt das keine neue Version, außer beim ersten Mal nach dem Import des Projekt-ZIPs:
-# Das Prozessmanagement stellt mit eigener Quelle bereit), legt eigene Instanzen mit
-# Business Key "smoke-..." an und löscht am Ende alle Instanzen dieses Laufs, die noch offen sind.
+# Braucht nur bash und curl. Deployt loesung/genehmigungsworkflow-entwickler.bpmn, das Modell
+# nach Übung 8 mit "Genehmigung verbuchen" als External Task. Der Startstand prozess/genehmigungsworkflow.bpmn
+# hat dort einen User Task, Pfad a) fände nichts auf dem Topic. Nach dem Lauf ist die Entwickler-Fassung
+# die neueste Version in der Engine. Ein zweiter Lauf legt keine weitere Version an.
+# Legt eigene Instanzen mit Business Key "smoke-..." an und löscht am Ende alle Instanzen dieses Laufs,
+# die noch offen sind.
 # Exit-Code 0: alles grün. Exit-Code 1: mindestens eine Prüfung fehlgeschlagen.
 set -u
 
@@ -20,7 +23,7 @@ PROZESS_KEY="${PROZESS_KEY:-Process_Genehmigung}"
 TOPIC="${TOPIC:-genehmigung-verbuchen}"
 # Relativ zum Ordner stack/, das funktioniert auch mit curl unter Git Bash (Windows)
 cd "$(dirname "$0")" || exit 1
-BPMN="${BPMN:-../prozess/genehmigungsworkflow.bpmn}"
+BPMN="${BPMN:-../loesung/genehmigungsworkflow-entwickler.bpmn}"
 WORKER_ID="smoke-test"
 LAUF="smoke-$(date +%Y%m%d%H%M%S)-$$"
 
@@ -54,8 +57,8 @@ pruefe() { # beschreibung erwartet ist
   if [ "$2" = "$3" ]; then ok "$1"; else falsch "$1 (erwartet: $2, ist: ${3:-leer})"; fi
 }
 
-# Wartet, bis an der Instanz kein Speicherpunkt mehr aussteht. Die Vorlage hat nach dem
-# Start-Event und nach "Antrag prüfen" je einen (camunda:asyncAfter wie der easyForm-Baustein):
+# Wartet, bis an der Instanz kein Speicherpunkt mehr aussteht. Das Modell hat nach dem Start-Event,
+# nach "Antrag prüfen" und nach "Antrag nachbessern" je einen (camunda:asyncAfter, von den Formular-Bausteinen):
 # Die Engine antwortet dort schon, den Rest führt ihr Job Executor kurz danach aus.
 # Gezählt werden nur Jobs von Speicherpunkten (messages), nicht der Timer an "Antrag prüfen".
 speicherpunkte_abwarten() { # prozessinstanz
@@ -135,14 +138,21 @@ fi
 
 echo "b) abgelehnt"
 if antrag abgelehnt abgelehnt; then
+  rest gerda GET "/task?processInstanceId=$PI&candidateGroup=genehmiger"
+  pruefe "\"Ablehnung mitteilen\" liegt bei der Gruppe genehmiger" Task_Ablehnen "$(wert taskDefinitionKey)"
+  mitteilen=$(wert id)
+  rest worker GET "/external-task?processInstanceId=$PI"
+  pruefe "Gegenprobe: kein External Task" "[]" "$ANTWORT"
+  rest worker GET "/history/process-instance/$PI"
+  pruefe "Instanz wartet noch" ACTIVE "$(wert state)"
+  rest gerda POST "/task/$mitteilen/complete" "{}"
+  pruefe "gerda schließt \"Ablehnung mitteilen\" ab" 204 "$STATUS"
   rest worker GET "/history/process-instance/$PI"
   pruefe "Instanz beendet" COMPLETED "$(wert state)"
   rest worker GET "/history/activity-instance?processInstanceId=$PI&activityId=End_Abgelehnt"
   pruefe "Ende \"Antrag abgelehnt\" erreicht" End_Abgelehnt "$(wert activityId)"
-  rest worker GET "/history/variable-instance?processInstanceId=$PI&variableName=ablehnungMitgeteilt"
-  pruefe "ablehnungMitgeteilt gesetzt" true "$(wert value)"
   rest worker GET "/history/activity-instance?processInstanceId=$PI&activityId=Task_Verbuchen"
-  pruefe "Gegenprobe: kein External Task" "[]" "$ANTWORT"
+  pruefe "Gegenprobe: nie bei \"Genehmigung verbuchen\"" "[]" "$ANTWORT"
 fi
 
 echo "c) nachbessern"

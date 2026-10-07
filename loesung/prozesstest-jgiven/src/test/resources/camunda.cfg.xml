@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Die Engine für die Szenarien, wie in loesung/prozesstest-java: H2 im Speicher, ohne Job Executor.
+  Speicherpunkte (asyncAfter) stoßen die Stufen deshalb selbst an.
+  Den Dateinamen camunda.cfg.xml liest ProcessEngineCoverageExtension.builder().build() in der Testklasse.
+  Die Klasse kommt aus CIB seven Process Test Coverage und erweitert die Engine im Speicher von CIB seven
+  (StandaloneInMemProcessEngineConfiguration): Beim Deployment hängt sie an jedes Element und jeden Pfeil
+  einen Listener, der mitschreibt, was die Szenarien durchlaufen. Daraus entsteht der Bericht unter target/process-test-coverage.
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+  <bean id="processEngineConfiguration" class="org.cibseven.community.process_test_coverage.engine.platform7.ProcessCoverageInMemProcessEngineConfiguration">
+    <property name="jdbcUrl" value="jdbc:h2:mem:prozesstest;DB_CLOSE_DELAY=1000" />
+    <property name="jobExecutorActivate" value="false" />
+    <!-- hasNotPassed liest die Historie -->
+    <property name="history" value="full" />
+  </bean>
+
+</beans>

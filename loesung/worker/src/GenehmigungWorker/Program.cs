@@ -75,7 +75,7 @@ try
                 // Dieser catch steht vor catch (Exception), sonst fängt der allgemeine auch die Ablehnung.
                 // In der Variante prozess/varianten/verbuchen-fehlerpfad.bpmn fängt das Error-Boundary
                 // BUCHUNG_ABGELEHNT und führt zu "Buchung klären".
-                // Ohne passendes Error-Boundary, etwa in der Vorlage, beendet die Engine die Instanz still
+                // Ohne passendes Error-Boundary, etwa in eurem Genehmigungsworkflow, beendet die Engine die Instanz still
                 // am Service Task: abgeschlossen, aber ohne "Antrag genehmigt", ohne Incident, und der Grund
                 // steht nur im Log der Engine. bpmnError also nur, wenn das Modell den Code auch fängt.
                 await client.BpmnErrorAsync(task, "BUCHUNG_ABGELEHNT", abgelehnt.Message);

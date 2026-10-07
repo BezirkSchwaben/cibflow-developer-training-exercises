@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Die Tests laufen gegen den echten Code beider Projekte. appsettings.json kommt vom Worker mit.
+         Die Domäne referenzieren sie auch direkt: Ihre Unit-Tests brauchen den Worker gar nicht. -->
+    <ProjectReference Include="..\..\src\GenehmigungWorker.Domaene\GenehmigungWorker.Domaene.csproj" />
+    <ProjectReference Include="..\..\src\GenehmigungWorker\GenehmigungWorker.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="GenehmigungWorker" />
+    <Using Include="GenehmigungWorker.Adapter.Engine" />
+    <Using Include="GenehmigungWorker.Adapter.Fachsystem" />
+    <Using Include="GenehmigungWorker.Domaene" />
+    <Using Include="GenehmigungWorker.Domaene.Ports" />
+  </ItemGroup>
+
+</Project>

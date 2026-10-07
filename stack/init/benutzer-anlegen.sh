@@ -90,8 +90,9 @@ mitglied_machen() { # gruppe benutzer
 
 # 5. Tasklist-Filter anlegen, wenn es noch keinen mit diesem Namen gibt.
 # Die Engine legt beim ersten Start nur "All tasks" an. Diese beiden Filter zeigen
-# die Aufgaben so, wie das Modell sie verteilt: "Antrag prüfen" bei der Gruppe
-# genehmiger, "Antrag nachbessern" direkt bei der Antragstellerin.
+# die Aufgaben so, wie das Modell sie verteilt: bei der Gruppe genehmiger "Antrag prüfen",
+# "Ablehnung mitteilen", "Erinnerung senden" und vor Übung 8 "Genehmigung verbuchen",
+# direkt bei der Antragstellerin "Antrag nachbessern" und "Genehmigende Stelle benachrichtigen".
 filter_anlegen() { # name priorität query-json
   name_url=$(printf '%s' "$1" | sed 's/ /%20/g')
   code=$(anfrage GET "/filter/count?resourceType=Task&name=$name_url")

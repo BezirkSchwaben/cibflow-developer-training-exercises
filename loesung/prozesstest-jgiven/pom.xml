@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ausblick in Kapitel 10: der Prozesstest des Genehmigungsworkflows als Szenario mit JGiven, kein Teil einer Übung.
+  Dieselbe Engine im Speicher wie in loesung/prozesstest-java, dasselbe Modell ohne External Task
+  (src/main/resources/genehmigungsworkflow-tag1.bpmn), ohne Server und ohne Spring Boot.
+  Ein eigenes Projekt, damit nur lädt, wer JGiven aufruft. Anleitung in README.md.
+
+    ./mvnw test             Szenarien ausführen, die Konsole zeigt sie in Angenommen, Wenn, Dann
+    ./mvnw jgiven:report    danach: HTML-Bericht unter target/jgiven-reports/html/index.html
+
+  Windows: .\mvnw.cmd statt ./mvnw. Maven selbst ist über .mvn/jvm.config leiser gestellt.
+  Welche Elemente und Pfeile des Modells die Szenarien durchlaufen haben, zeigt nach jedem Lauf
+  ein HTML-Bericht unter target/process-test-coverage.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.miragon.schulung</groupId>
+  <artifactId>prozesstest-jgiven</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+  <name>Prozesstest Genehmigungsworkflow als Szenario (JGiven)</name>
+
+  <properties>
+    <!-- Voraussetzung der Schulung ist JDK 21, neuere JDKs bauen dasselbe -->
+    <maven.compiler.release>21</maven.compiler.release>
+    <!-- Die Schritte heißen mit Umlauten (ein_Antrag_über_...), auch unter Windows -->
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!-- Die Testbibliotheken folgen der Version von CIB seven (Maven Central), wie in loesung/prozesstest-java -->
+    <cibseven.version>2.2.0</cibseven.version>
+    <junit.version>5.14.4</junit.version>
+    <assertj.version>3.27.7</assertj.version>
+    <h2.version>2.3.232</h2.version>
+    <slf4j.version>2.0.17</slf4j.version>
+
+    <!-- CIB seven Process Test Coverage, Community-Extension von CIB seven (Maven Central) -->
+    <process-test-coverage.version>2.2.0</process-test-coverage.version>
+
+    <!-- CIB seven BPM JGiven, Community-Extension von CIB seven (Maven Central), passend zu CIB seven 2.2.0 -->
+    <cibseven-bpm-jgiven.version>2.2.0</cibseven-bpm-jgiven.version>
+    <!-- Dieselbe JGiven-Version, gegen die cibseven-bpm-jgiven 2.2.0 gebaut ist -->
+    <jgiven.version>2.0.3</jgiven.version>
+
+    <!-- Zeichen im Testbaum. Zeigt die Konsole ? statt ✔ und ✘: -Dbaum.theme=ASCII -->
+    <baum.theme>UNICODE</baum.theme>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.cibseven.bpm</groupId>
+        <artifactId>cibseven-bom</artifactId>
+        <version>${cibseven.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>${junit.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!-- Die Engine selbst, im Test mit H2 im Speicher -->
+    <dependency>
+      <groupId>org.cibseven.bpm</groupId>
+      <artifactId>cibseven-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- @Deployment und die ProcessEngineExtension, auf der die Extension für die Abdeckung aufbaut -->
+    <dependency>
+      <groupId>org.cibseven.bpm</groupId>
+      <artifactId>cibseven-bpm-junit5</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Prüfungen wie isWaitingAtExactly, hasNotPassed, isEnded. Die Stufen von JGiven rufen sie intern -->
+    <dependency>
+      <groupId>org.cibseven.bpm</groupId>
+      <artifactId>cibseven-bpm-assert</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!--
+      JGiven für JUnit 5: SzenarioTest mit angenommen(), wenn(), dann() und die JGivenExtension.
+      Nach jedem Lauf schreibt JGiven die Szenarien als Text auf die Konsole und als JSON nach
+      target/jgiven-reports/json, daraus baut ./mvnw jgiven:report den HTML-Bericht.
+    -->
+    <dependency>
+      <groupId>com.tngtech.jgiven</groupId>
+      <artifactId>jgiven-junit5</artifactId>
+      <version>${jgiven.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!--
+      Die Basisklasse ProcessStage für die Stufen: Engine und Prozessinstanz wandern von Stufe zu Stufe,
+      dazu fertige Schritte wie task_is_completed_with_variables. In Kotlin geschrieben, zieht die Kotlin-Stdlib mit.
+    -->
+    <dependency>
+      <groupId>org.cibseven.community</groupId>
+      <artifactId>cibseven-bpm-jgiven</artifactId>
+      <version>${cibseven-bpm-jgiven.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!--
+      Abdeckung: ProcessEngineCoverageExtension statt ProcessEngineExtension, die Engine-Klasse dazu steht in
+      src/test/resources/camunda.cfg.xml. Nach dem Lauf liegt target/process-test-coverage/<Testklasse>/report.html.
+    -->
+    <dependency>
+      <groupId>org.cibseven.community.process_test_coverage</groupId>
+      <artifactId>cibseven-process-test-coverage-junit5-platform-7</artifactId>
+      <version>${process-test-coverage.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- cibseven-bpm-assert und cibseven-bpm-jgiven bauen auf AssertJ auf, bringen es aber nicht mit (provided) -->
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>${assertj.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <version>${h2.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Logausgabe der Engine, leise gestellt in src/test/resources/simplelogger.properties -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>${slf4j.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.3.1</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.14.1</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <!-- 3.5.3 ist die Version, gegen die der Tree-Reporter gebaut ist -->
+        <version>3.5.3</version>
+        <dependencies>
+          <dependency>
+            <groupId>me.fabriciorby</groupId>
+            <artifactId>maven-surefire-junit5-tree-reporter</artifactId>
+            <version>1.5.1</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <!--
+            Testausgabe als Baum mit den Namen der Testmethoden, wie in loesung/prozesstest-java.
+            Anders als dort bleibt die Ausgabe der Tests auf der Konsole an: Über dem Baum stehen die Szenarien,
+            die JGiven nach der Testklasse schreibt. Die Engine schreibt nur Warnungen (simplelogger.properties).
+          -->
+          <reportFormat>plain</reportFormat>
+          <statelessTestsetInfoReporter implementation="org.apache.maven.plugin.surefire.extensions.junit5.JUnit5StatelessTestsetInfoTreeReporter">
+            <theme>${baum.theme}</theme>
+            <printStacktraceOnError>false</printStacktraceOnError>
+            <printStacktraceOnFailure>false</printStacktraceOnFailure>
+            <printBlankLineBetweenTests>false</printBlankLineBetweenTests>
+          </statelessTestsetInfoReporter>
+          <systemPropertyVariables>
+            <!-- JGiven ohne Farben: Mit Farben zerlegt die Bibliothek Jansi die Umlaute und „“ der Szenarien -->
+            <jgiven.report.text.color>false</jgiven.report.text.color>
+            <!-- Ohne Startmeldung von kotlin-logging (Process Test Coverage) über den Szenarien -->
+            <kotlin-logging.logStartupMessage>false</kotlin-logging.logStartupMessage>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+      <!--
+        HTML-Bericht von JGiven aus target/jgiven-reports/json, nach ./mvnw test:
+        ./mvnw jgiven:report, Ergebnis target/jgiven-reports/html/index.html. Läuft nicht von selbst mit,
+        Maven lädt das Plugin erst beim ersten Aufruf von jgiven:report.
+      -->
+      <plugin>
+        <groupId>com.tngtech.jgiven</groupId>
+        <artifactId>jgiven-maven-plugin</artifactId>
+        <version>${jgiven.version}</version>
+        <configuration>
+          <format>html</format>
+          <title>Genehmigungsworkflow</title>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <!--
+      Ab JDK 24 warnt Java beim ersten Aufruf von sun.misc.Unsafe. Byte Buddy ruft es, wenn JGiven die Stufen
+      erzeugt, und vier Zeilen WARNING stünden über dem Testbaum. JDK 21 kennt die Option nicht, deshalb nur ab 24.
+    -->
+    <profile>
+      <id>ab-jdk-24</id>
+      <activation>
+        <jdk>[24,)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <argLine>--sun-misc-unsafe-memory-access=allow</argLine>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>
